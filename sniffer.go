@@ -21,13 +21,16 @@ package HoneyBadger
 
 import (
 	"fmt"
+	"io"
+
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"io"
-	"log"
 
 	"github.com/david415/HoneyBadger/drivers"
 	"github.com/david415/HoneyBadger/types"
+	"github.com/hashicorp/golang-lru"
 )
 
 // Sniffer sets up the connection pool and is an abstraction layer for dealing
@@ -40,16 +43,22 @@ type Sniffer struct {
 	stopCaptureChan  chan bool
 	decodePacketChan chan TimedRawPacket
 	stopDecodeChan   chan bool
+	LRU              *lru.Cache
 }
 
 // NewSniffer creates a new Sniffer struct
 func NewSniffer(options *types.SnifferDriverOptions, dispatcher PacketDispatcher) types.PacketSource {
+	hlru, err := lru.New(5000)
+	if err != nil {
+		log.Printf("Error creating LRU: %#v", err)
+	}
 	i := Sniffer{
 		dispatcher:       dispatcher,
 		options:          options,
 		stopCaptureChan:  make(chan bool),
 		decodePacketChan: make(chan TimedRawPacket),
 		stopDecodeChan:   make(chan bool),
+		LRU:              hlru,
 	}
 	return &i
 }
@@ -144,6 +153,7 @@ func (i *Sniffer) decodePackets() {
 
 	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip, &tcp, &payload)
 	decoded := make([]gopacket.LayerType, 0, 4)
+	go CacheInfo(i.LRU)
 
 	for {
 		select {
@@ -165,7 +175,27 @@ func (i *Sniffer) decodePackets() {
 				TCP:       tcp,
 				Payload:   payload,
 			}
-			i.dispatcher.ReceivePacket(&packetManifest)
+			if FilterExternal(&packetManifest) == nil {
+				continue
+			}
+
+			lkey := LRUKey(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
+			dlen := len(packetManifest.Payload)
+			if val, ok := i.LRU.Get(lkey); ok {
+				//log.Infof("lkey: %s, lrulen: %#v", lkey, i.LRU.Keys())
+				pval := val.(*Panopticon)
+				//log.Debugf("%-15s -> %15s ::: %d -> %d\n", packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), pval.Transfered(), pval.Transfered()+uint64(dlen))
+				pval.AddTransfer(uint64(dlen))
+			} else {
+				log.Printf("lkey %s not found, creating new cache entry", lkey)
+				p := NewPanopticon(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
+				p.AddTransfer(uint64(dlen))
+				if ok := i.LRU.Add(lkey, p); ok {
+					log.Infof("lkey created successfully")
+				}
+			}
+
+			//i.dispatcher.ReceivePacket(&packetManifest)
 		}
 	}
 }
