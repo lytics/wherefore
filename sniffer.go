@@ -183,12 +183,12 @@ func (i *Sniffer) decodePackets() {
 			dlen := len(packetManifest.Payload)
 			if val, ok := i.LRU.Get(lkey); ok {
 				//log.Infof("lkey: %s, lrulen: %#v", lkey, i.LRU.Keys())
-				pval := val.(*Panopticon)
+				pval := val.(*Pan)
 				//log.Debugf("%-15s -> %15s ::: %d -> %d\n", packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), pval.Transfered(), pval.Transfered()+uint64(dlen))
 				pval.AddTransfer(uint64(dlen))
 			} else {
 				log.Printf("lkey %s not found, creating new cache entry", lkey)
-				p := NewPanopticon(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
+				p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
 				p.AddTransfer(uint64(dlen))
 				if ok := i.LRU.Add(lkey, p); ok {
 					log.Infof("lkey created successfully")
