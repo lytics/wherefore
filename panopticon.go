@@ -58,7 +58,11 @@ type Pan struct {
 	src        string
 	dst        string
 	opened     time.Time
+	last       time.Time
 	transfered uint64
+	//TransferAnalysis channel
+	averagingChan chan uint64
+	//GoVector for evaluation by Anomalyzer
 }
 
 type OpticonError struct {
@@ -71,7 +75,8 @@ func (oe OpticonError) Error() string {
 }
 
 func NewPan(src, dst string) *Pan {
-	p := &Pan{opened: time.Now(), transfered: 0}
+	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0}
+	//Start Goroutine to average intake via channel
 	return p
 }
 
@@ -95,21 +100,23 @@ func CacheInfo(l *lru.Cache) {
 	log.Errorf("\nWe're running CacheInfo right? %#v\n", l)
 	for {
 
-		select {
-		case <-time.After(12 * time.Second):
-			keys := l.Keys()
-			log.Errorf("Keys found for parsing: %#v", keys)
-			for _, k := range keys {
-				if p, ok := l.Get(k); ok {
-					log.Errorf("%-32s ::: %s", k, p.(*Pan).String())
-				} else {
-					log.Errorf("Failed to Peek key: %s\n", k)
+		/*
+			select {
+			case <-time.After(12 * time.Second):
+				keys := l.Keys()
+				log.Errorf("Keys found for parsing: %#v", keys)
+				for _, k := range keys {
+					if p, ok := l.Get(k); ok {
+						log.Errorf("%-32s ::: %s", k, p.(*Pan).String())
+					} else {
+						log.Errorf("Failed to Peek key: %s\n", k)
+					}
 				}
 			}
-		}
+		*/
 
 		select {
-		case <-time.After(4 * time.Second):
+		case <-time.After(10 * time.Second):
 			//log.Errorf("LRU cache[%d]\nKeys: %#v\n", l.Len(), l.Keys())
 			if pans, err := CacheTopTransfer(l); err == nil {
 				for i := 0; i < 10; i++ {

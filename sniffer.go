@@ -175,14 +175,17 @@ func (i *Sniffer) decodePackets() {
 				TCP:       tcp,
 				Payload:   payload,
 			}
-			if FilterExternal(&packetManifest) == nil {
-				continue
-			}
+
+			//Short circut to only watch traffic heading in one direction
+			/*
+				if FilterExternal(&packetManifest) == nil {
+					continue
+				}
+			*/
 
 			lkey := LRUKey(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
 			dlen := len(packetManifest.Payload)
 			if val, ok := i.LRU.Get(lkey); ok {
-				//log.Infof("lkey: %s, lrulen: %#v", lkey, i.LRU.Keys())
 				pval := val.(*Pan)
 				//log.Debugf("%-15s -> %15s ::: %d -> %d\n", packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), pval.Transfered(), pval.Transfered()+uint64(dlen))
 				pval.AddTransfer(uint64(dlen))
