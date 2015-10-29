@@ -166,7 +166,8 @@ func CacheTopTransfer(l *lru.Cache) ([]*Pan, error) {
 			//Calculate if there's been recent transfer on this stream
 			plen := len(*P.gv)
 			recentTransfer := 0.0
-			for i := 1; i < 5; i++ {
+			//Check the last 30 seconds for any transfer; if none skip
+			for i := 1; i < 7; i++ {
 				gv := *P.gv
 				recentTransfer += gv[plen-i]
 			}
