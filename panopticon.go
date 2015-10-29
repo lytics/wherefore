@@ -150,10 +150,14 @@ func CacheInfo(l *lru.Cache) {
 			//log.Errorf("LRU cache[%d]\nKeys: %#v\n", l.Len(), l.Keys())
 			log.Infof("########################################################")
 			if pans, err := CacheTopTransfer(l); err == nil {
-				for i := 0; i < 10; i++ {
-					j := len(pans) - 1 - i
+				plen := len(pans)
+				if plen > 10 {
+					plen = 10
+				}
+				for i := 0; i < plen; i++ {
+					j := plen - 1 - i
 					g := *pans[j].gv
-					log.Infof("%-15s -> %15s :: %s :: %d :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].transfered, len(g), g)
+					log.Infof("%-15s -> %15s :: %s :: %d :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].transfered, len(pans[j].gv), pans[j].gv)
 				}
 			} else {
 				log.Errorf("Error finding the top Transfered connections: %v", err)
@@ -173,7 +177,9 @@ func CacheTopTransfer(l *lru.Cache) ([]*Pan, error) {
 	for _, k := range keys {
 		if p, ok := l.Get(k); ok {
 			P := p.(*Pan)
-			pancons = append(pancons, P)
+			if P.transfered > 0 {
+				pancons = append(pancons, P)
+			}
 		} else {
 			return nil, OpticonError{time.Now(), fmt.Sprintf("Failed to Get[%s] from LRU cache", k)}
 		}
