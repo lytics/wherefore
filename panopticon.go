@@ -51,7 +51,7 @@ func (o Opticon) Swap(i, j int) {
 }
 
 func (o Opticon) Less(i, j int) bool {
-	return o[i].transfered < o[j].transfered
+	return o[i].gv.Mean() < o[j].gv.Mean()
 }
 
 //Watcher function updates data structures for anomaly analysis
@@ -130,34 +130,19 @@ func CacheInfo(l *lru.Cache) {
 	log.Errorf("\nWe're running CacheInfo right? %#v\n", l)
 	for {
 
-		/*
-			select {
-			case <-time.After(12 * time.Second):
-				keys := l.Keys()
-				log.Errorf("Keys found for parsing: %#v", keys)
-				for _, k := range keys {
-					if p, ok := l.Get(k); ok {
-						log.Errorf("%-32s ::: %s", k, p.(*Pan).String())
-					} else {
-						log.Errorf("Failed to Peek key: %s\n", k)
-					}
-				}
-			}
-		*/
-
 		select {
 		case <-time.After(10 * time.Second):
 			//log.Errorf("LRU cache[%d]\nKeys: %#v\n", l.Len(), l.Keys())
 			log.Infof("########################################################")
 			if pans, err := CacheTopTransfer(l); err == nil {
 				plen := len(pans)
+				panslen := plen
 				if plen > 10 {
 					plen = 10
 				}
 				for i := 0; i < plen; i++ {
-					j := plen - 1 - i
-					g := *pans[j].gv
-					log.Infof("%-15s -> %15s :: %s :: %d :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].transfered, len(pans[j].gv), pans[j].gv)
+					j := panslen - 1 - i
+					log.Infof("%-15s -> %15s :: %s :: %8f :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].gv.Mean(), len(*pans[j].gv), *pans[j].gv)
 				}
 			} else {
 				log.Errorf("Error finding the top Transfered connections: %v", err)
@@ -177,7 +162,17 @@ func CacheTopTransfer(l *lru.Cache) ([]*Pan, error) {
 	for _, k := range keys {
 		if p, ok := l.Get(k); ok {
 			P := p.(*Pan)
-			if P.transfered > 0 {
+
+			//Calculate if there's been recent transfer on this stream
+			plen := len(*P.gv)
+			recentTransfer := 0.0
+			for i := 1; i < 5; i++ {
+				gv := *P.gv
+				recentTransfer += gv[plen-i]
+			}
+
+			//if recent transfer add to list for sorting.
+			if recentTransfer > 0 {
 				pancons = append(pancons, P)
 			}
 		} else {

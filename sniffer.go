@@ -177,11 +177,9 @@ func (i *Sniffer) decodePackets() {
 			}
 
 			//Short circut to only watch traffic heading in one direction
-			/*
-				if FilterExternal(&packetManifest) == nil {
-					continue
-				}
-			*/
+			/*if FilterExternal(&packetManifest) == nil {
+				continue
+			}*/
 
 			lkey := LRUKey(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
 			dlen := len(packetManifest.Payload)
