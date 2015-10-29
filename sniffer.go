@@ -181,6 +181,8 @@ func (i *Sniffer) decodePackets() {
 				continue
 			}*/
 
+			//Derive packet key and either update data transfered or
+			//  create new Pan struct/goroutine watcher.
 			lkey := LRUKey(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
 			dlen := len(packetManifest.Payload)
 			if val, ok := i.LRU.Get(lkey); ok {
