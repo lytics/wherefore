@@ -24,6 +24,7 @@ package HoneyBadger
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"sort"
 	"time"
@@ -31,8 +32,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/david415/HoneyBadger/types"
 	"github.com/drewlanenga/govector"
+	"github.com/lytics/anomalyzer"
 
 	"github.com/hashicorp/golang-lru"
+)
+
+const (
+	NA = math.SmallestNonzeroFloat64
 )
 
 var ipv4Str string
@@ -88,19 +94,40 @@ func (oe OpticonError) Error() string {
 
 //Watcher function updates data structures for anomaly analysis
 func PanWatcher(p *Pan) {
+	i := 0
+	conf := &anomalyzer.AnomalyzerConf{
+		Sensitivity: 0.2,
+		UpperBound:  10000,
+		LowerBound:  NA, // ignore the lower bound
+		ActiveSize:  1,
+		NSeasons:    4,
+		Methods:     []string{"diff", "fence"},
+	}
 
 	for {
+		i++
 		select {
+		//TODO: Make time interval configurable
 		case <-time.After(5 * time.Second):
-			//TODO: Check if self should be terminated
-			/*
-				transferDiff := p.Transfered() - prevTransfer
-				prevTransfer = transferDiff
-				// Write Data Point for time analysis with transferDiff
-			*/
 			p.gv.PushFixed(float64(p.Transfered()))
 			p.LastUpdate()
 			p.ResetTransfered()
+		}
+		//Run alert testing over the transfer Vector
+		//TODO Replace with configurable interval which matches a full dataset
+		if i > 5 {
+			prob, _ := anomalyzer.NewAnomalyzer(conf, *p.gv)
+
+			aprob := prob.Eval()
+
+			if aprob > 0.0 {
+				log.Infof("Anomalyzer %s score: %v", p.String(), aprob)
+			}
+			if aprob > 0.5 {
+				log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
+			}
+
+			i = 0
 		}
 	}
 }
@@ -125,7 +152,7 @@ func NewPan(src, dst string) *Pan {
 }
 
 func (p *Pan) String() string {
-	return fmt.Sprintf("%d -- %s", p.transfered, p.opened)
+	return fmt.Sprintf("%15s -- %15s", p.src, p.dst)
 }
 
 func (p *Pan) Transfered() uint64 {
