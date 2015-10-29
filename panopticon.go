@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/david415/HoneyBadger/types"
+	"github.com/drewlanenga/govector"
 
 	"github.com/hashicorp/golang-lru"
 )
@@ -53,16 +54,35 @@ func (o Opticon) Less(i, j int) bool {
 	return o[i].transfered < o[j].transfered
 }
 
+//Watcher function updates data structures for anomaly analysis
+func PanWatcher(p *Pan) {
+
+	for {
+		select {
+		case <-time.After(5 * time.Second):
+			//TODO: Check if self should be terminated
+			/*
+				transferDiff := p.Transfered() - prevTransfer
+				prevTransfer = transferDiff
+				// Write Data Point for time analysis with transferDiff
+			*/
+			p.gv.PushFixed(float64(p.Transfered()))
+			p.LastUpdate()
+			p.ResetTransfered()
+		}
+	}
+}
+
 //Pan objects watch each IP connection's traffic and total its traffic over time
 type Pan struct {
-	src        string
-	dst        string
-	opened     time.Time
-	last       time.Time
-	transfered uint64
-	//TransferAnalysis channel
+	src           string
+	dst           string
+	opened        time.Time
+	Last          time.Time
+	transfered    uint64
 	averagingChan chan uint64
 	//GoVector for evaluation by Anomalyzer
+	gv *govector.Vector
 }
 
 type OpticonError struct {
@@ -75,8 +95,10 @@ func (oe OpticonError) Error() string {
 }
 
 func NewPan(src, dst string) *Pan {
-	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0}
+	g := make(govector.Vector, 10, 10)
+	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0, gv: &g}
 	//Start Goroutine to average intake via channel
+	go PanWatcher(p)
 	return p
 }
 
@@ -88,8 +110,16 @@ func (p *Pan) Transfered() uint64 {
 	return p.transfered
 }
 
+func (p *Pan) LastUpdate() {
+	p.Last = time.Now()
+}
+
 func (p *Pan) AddTransfer(bytes uint64) {
 	p.transfered += bytes
+}
+
+func (p *Pan) ResetTransfered() {
+	p.transfered = 0
 }
 
 func (p *Pan) Age() time.Duration {
@@ -118,19 +148,23 @@ func CacheInfo(l *lru.Cache) {
 		select {
 		case <-time.After(10 * time.Second):
 			//log.Errorf("LRU cache[%d]\nKeys: %#v\n", l.Len(), l.Keys())
+			log.Infof("########################################################")
 			if pans, err := CacheTopTransfer(l); err == nil {
 				for i := 0; i < 10; i++ {
 					j := len(pans) - 1 - i
-					log.Infof("%-15s -> %15s :: %s :: %d", pans[j].src, pans[j].dst, pans[j].opened, pans[j].transfered)
+					g := *pans[j].gv
+					log.Infof("%-15s -> %15s :: %s :: %d :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].transfered, len(g), g)
 				}
 			} else {
-				log.Errorf("Error finding the top transfered connections: %v", err)
+				log.Errorf("Error finding the top Transfered connections: %v", err)
 			}
 		}
 
 	}
 }
 
+//Iterate over all IPkeys in the LRU Cache and extract their Pan struct
+// for analysis. Returns a list of Pans sorted by their data Transfered.
 func CacheTopTransfer(l *lru.Cache) ([]*Pan, error) {
 	keys := l.Keys()
 
