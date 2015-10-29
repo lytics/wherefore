@@ -198,7 +198,6 @@ func (i *Sniffer) decodePackets() {
 				}
 			}
 
-			//i.dispatcher.ReceivePacket(&packetManifest)
 		}
 	}
 }

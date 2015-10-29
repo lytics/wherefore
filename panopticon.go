@@ -1,3 +1,25 @@
+/*
+ *    Wherefore main command line tool for monitoring network traffic
+ *    on a IP stream basis.
+ *
+ *    Forked from the HoneyBadger core library for detecting TCP injection attacks
+ *
+ *    Copyright (C) 2015 Josh Roppo, Lytics.io, David Stainton
+ *
+ *    This program is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *    (at your option) any later version.
+ *
+ *    This program is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package HoneyBadger
 
 import (
@@ -40,6 +62,7 @@ func LRUKey(src, dst string) string {
 	return fmt.Sprintf("%s->%s", src, dst)
 }
 
+//Opticon is a type ofr Sorting Pan slices
 type Opticon []*Pan
 
 func (o Opticon) Len() int {
@@ -52,6 +75,15 @@ func (o Opticon) Swap(i, j int) {
 
 func (o Opticon) Less(i, j int) bool {
 	return o[i].gv.Mean() < o[j].gv.Mean()
+}
+
+type OpticonError struct {
+	When time.Time
+	What string
+}
+
+func (oe OpticonError) Error() string {
+	return fmt.Sprintf("%v: %v", oe.When, oe.What)
 }
 
 //Watcher function updates data structures for anomaly analysis
@@ -75,23 +107,13 @@ func PanWatcher(p *Pan) {
 
 //Pan objects watch each IP connection's traffic and total its traffic over time
 type Pan struct {
-	src           string
-	dst           string
-	opened        time.Time
-	Last          time.Time
-	transfered    uint64
-	averagingChan chan uint64
+	src        string
+	dst        string
+	opened     time.Time
+	Last       time.Time
+	transfered uint64
 	//GoVector for evaluation by Anomalyzer
 	gv *govector.Vector
-}
-
-type OpticonError struct {
-	When time.Time
-	What string
-}
-
-func (oe OpticonError) Error() string {
-	return fmt.Sprintf("%v: %v", oe.When, oe.What)
 }
 
 func NewPan(src, dst string) *Pan {
