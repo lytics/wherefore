@@ -22,9 +22,11 @@ package main
 
 import (
 	"flag"
+	"math"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/lytics/anomalyzer"
 
 	"github.com/david415/HoneyBadger"
 	"github.com/david415/HoneyBadger/logging"
@@ -58,6 +60,12 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		maxNumPcapRotations = flag.Int("max_pcap_rotations", 10, "maximum number of pcap rotations per connection")
 		archiveDir          = flag.String("archive_dir", "", "archive directory for storing attack logs and related pcap files")
 		daq                 = flag.String("daq", "libpcap", "Data AcQuisition packet source")
+		//Anomalyzer Configs
+		anomSensetivity = flag.Float64("anom_sensitivity", 2.0, "Anomalyzer sensetivity")
+		anomUpperBound  = flag.Float64("anom_upper_bound", 5.0, "Anomalyzer UpperBound for Fencing")
+		anomLowerBound  = flag.Float64("anom_lower_bound", math.SmallestNonzeroFloat64, "Anomolyzer LowerBound for Fencing")
+		anomActiveSize  = flag.Int("anom_active_size", 1, "Anomalyzer Active Size")
+		anomNSeasons    = flag.Int("anom_n_seasons", 4, "Anomalyzer N Seasons variable")
 	)
 	flag.Parse()
 
@@ -101,6 +109,15 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		logger = loggerInstance
 	}
 
+	anomConf := &anomalyzer.AnomalyzerConf{
+		Sensitivity: *anomSensetivity,
+		UpperBound:  *anomUpperBound,
+		LowerBound:  *anomLowerBound, // ignore the lower bound
+		ActiveSize:  *anomActiveSize,
+		NSeasons:    *anomNSeasons,
+		Methods:     []string{"diff", "fence"},
+	}
+
 	dispatcherOptions := HoneyBadger.DispatcherOptions{
 		BufferedPerConnection:    *bufferedPerConnection,
 		BufferedTotal:            *bufferedTotal,
@@ -118,12 +135,13 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 	}
 
 	snifferDriverOptions := types.SnifferDriverOptions{
-		DAQ:          *daq,
-		Device:       *iface,
-		Filename:     *pcapfile,
-		WireDuration: wireDuration,
-		Snaplen:      int32(*snaplen),
-		Filter:       *filter,
+		DAQ:            *daq,
+		Device:         *iface,
+		Filename:       *pcapfile,
+		WireDuration:   wireDuration,
+		Snaplen:        int32(*snaplen),
+		Filter:         *filter,
+		AnomalyzerConf: anomConf,
 	}
 
 	connectionFactory := &HoneyBadger.DefaultConnFactory{}

@@ -93,7 +93,7 @@ func (oe OpticonError) Error() string {
 }
 
 //Watcher function updates data structures for anomaly analysis
-func PanWatcher(p *Pan) {
+func PanWatcher(p *Pan, ac *anomalyzer.AnomalyzerConf) {
 	i := 0
 	conf := &anomalyzer.AnomalyzerConf{
 		Sensitivity: 0.2,
@@ -143,11 +143,11 @@ type Pan struct {
 	gv *govector.Vector
 }
 
-func NewPan(src, dst string) *Pan {
+func NewPan(src, dst string, ac *anomalyzer.AnomalyzerConf) *Pan {
 	g := make(govector.Vector, 10, 10)
 	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0, gv: &g}
 	//Start Goroutine to average intake via channel
-	go PanWatcher(p)
+	go PanWatcher(p, ac)
 	return p
 }
 

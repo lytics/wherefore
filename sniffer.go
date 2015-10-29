@@ -48,7 +48,7 @@ type Sniffer struct {
 
 // NewSniffer creates a new Sniffer struct
 func NewSniffer(options *types.SnifferDriverOptions, dispatcher PacketDispatcher) types.PacketSource {
-	hlru, err := lru.New(5000)
+	hlru, err := lru.New(500)
 	if err != nil {
 		log.Printf("Error creating LRU: %#v", err)
 	}
@@ -191,7 +191,7 @@ func (i *Sniffer) decodePackets() {
 				pval.AddTransfer(uint64(dlen))
 			} else {
 				log.Debugf("lkey %s not found, creating new cache entry", lkey)
-				p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
+				p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), i.options.AnomalyzerConf)
 				p.AddTransfer(uint64(dlen))
 				if ok := i.LRU.Add(lkey, p); ok {
 					log.Infof("lkey created successfully")

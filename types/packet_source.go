@@ -20,18 +20,21 @@
 package types
 
 import (
+	"time"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"time"
+	"github.com/lytics/anomalyzer"
 )
 
 type SnifferDriverOptions struct {
-	DAQ          string
-	Filename     string
-	Device       string
-	Snaplen      int32
-	WireDuration time.Duration
-	Filter       string
+	DAQ            string
+	Filename       string
+	Device         string
+	Snaplen        int32
+	WireDuration   time.Duration
+	Filter         string
+	AnomalyzerConf *anomalyzer.AnomalyzerConf
 }
 
 // PacketDataSource is an interface for some source of packet data.
