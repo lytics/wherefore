@@ -23,6 +23,7 @@ package main
 import (
 	"flag"
 	"math"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -60,6 +61,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		anomLowerBound  = flag.Float64("anom_lower_bound", math.SmallestNonzeroFloat64, "Anomolyzer LowerBound for Fencing")
 		anomActiveSize  = flag.Int("anom_active_size", 1, "Anomalyzer Active Size")
 		anomNSeasons    = flag.Int("anom_n_seasons", 4, "Anomalyzer N Seasons variable")
+		anomMethodsCSL  = flag.String("anom_methods", "diff,fence,highrank,lowrank,magnitude", "Anomalyzer algorithms to test, written in csv format. eg: diff,fence,etc")
 	)
 	flag.Parse()
 
@@ -89,14 +91,16 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		log.Fatal("connection_max_buffer and total_max_buffer must be set to a non-zero value")
 	}
 
+	anomMethods := strings.Split(*anomMethodsCSL, ",")
 	anomConf := &anomalyzer.AnomalyzerConf{
 		Sensitivity: *anomSensetivity,
 		UpperBound:  *anomUpperBound,
 		LowerBound:  *anomLowerBound, // ignore the lower bound
 		ActiveSize:  *anomActiveSize,
 		NSeasons:    *anomNSeasons,
-		Methods:     []string{"diff", "fence"},
+		Methods:     anomMethods,
 	}
+	log.Debugf("AnomalyzerConf:\n%#v", anomConf)
 
 	snifferDriverOptions := types.SnifferDriverOptions{
 		DAQ:            *daq,
@@ -107,6 +111,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		Filter:         *filter,
 		AnomalyzerConf: anomConf,
 	}
+	log.Debugf("Sniffer Options:\n%#v", snifferDriverOptions)
 
 	connectionFactory := &HoneyBadger.DefaultConnFactory{}
 	var packetLoggerFactory types.PacketLoggerFactory
