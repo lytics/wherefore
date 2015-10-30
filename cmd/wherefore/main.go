@@ -41,13 +41,7 @@ func main() {
 		filter                   = flag.String("f", "tcp", "BPF filter for pcap")
 		logDir                   = flag.String("l", "", "incoming log dir used initially for pcap files if packet logging is enabled")
 		wireTimeout              = flag.String("w", "3s", "timeout for reading packets off the wire")
-		metadataAttackLog        = flag.Bool("metadata_attack_log", true, "if set to true then attack reports will only include metadata")
 		logPackets               = flag.Bool("log_packets", false, "if set to true then log all packets for each tracked TCP connection")
-		tcpTimeout               = flag.Duration("tcp_idle_timeout", time.Minute*5, "tcp idle timeout duration")
-		maxRingPackets           = flag.Int("max_ring_packets", 40, "Max packets per connection stream ring buffer")
-		detectHijack             = flag.Bool("detect_hijack", true, "Detect handshake hijack attacks")
-		detectInjection          = flag.Bool("detect_injection", true, "Detect injection attacks")
-		detectCoalesceInjection  = flag.Bool("detect_coalesce_injection", true, "Detect coalesce injection attacks")
 		maxConcurrentConnections = flag.Int("max_concurrent_connections", 0, "Maximum number of concurrent connection to track.")
 		bufferedPerConnection    = flag.Int("connection_max_buffer", 0, `
 Max packets to buffer for a single connection before skipping over a gap in data
@@ -95,20 +89,6 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		log.Fatal("connection_max_buffer and total_max_buffer must be set to a non-zero value")
 	}
 
-	var logger types.Logger
-
-	if *metadataAttackLog {
-		loggerInstance := logging.NewAttackMetadataJsonLogger(*archiveDir)
-		loggerInstance.Start()
-		defer func() { loggerInstance.Stop() }()
-		logger = loggerInstance
-	} else {
-		loggerInstance := logging.NewAttackJsonLogger(*archiveDir)
-		loggerInstance.Start()
-		defer func() { loggerInstance.Stop() }()
-		logger = loggerInstance
-	}
-
 	anomConf := &anomalyzer.AnomalyzerConf{
 		Sensitivity: *anomSensetivity,
 		UpperBound:  *anomUpperBound,
@@ -116,22 +96,6 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		ActiveSize:  *anomActiveSize,
 		NSeasons:    *anomNSeasons,
 		Methods:     []string{"diff", "fence"},
-	}
-
-	dispatcherOptions := HoneyBadger.DispatcherOptions{
-		BufferedPerConnection:    *bufferedPerConnection,
-		BufferedTotal:            *bufferedTotal,
-		LogDir:                   *logDir,
-		LogPackets:               *logPackets,
-		MaxPcapLogRotations:      *maxNumPcapRotations,
-		MaxPcapLogSize:           *maxPcapLogSize,
-		TcpIdleTimeout:           *tcpTimeout,
-		MaxRingPackets:           *maxRingPackets,
-		Logger:                   logger,
-		DetectHijack:             *detectHijack,
-		DetectInjection:          *detectInjection,
-		DetectCoalesceInjection:  *detectCoalesceInjection,
-		MaxConcurrentConnections: *maxConcurrentConnections,
 	}
 
 	snifferDriverOptions := types.SnifferDriverOptions{
@@ -155,7 +119,6 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 	log.Info("Wherefore: IP stream monitoring and analysis tool")
 	options := HoneyBadger.SupervisorOptions{
 		SnifferDriverOptions: &snifferDriverOptions,
-		DispatcherOptions:    dispatcherOptions,
 		SnifferFactory:       HoneyBadger.NewSniffer,
 		ConnectionFactory:    connectionFactory,
 		PacketLoggerFactory:  packetLoggerFactory,
