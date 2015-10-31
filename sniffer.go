@@ -49,6 +49,7 @@ type Sniffer struct {
 // NewSniffer creates a new Sniffer struct
 func NewSniffer(options *types.SnifferDriverOptions, dispatcher PacketDispatcher) types.PacketSource {
 	hlru, err := lru.New(500)
+	alertChan := make(chan string)
 	if err != nil {
 		log.Printf("Error creating LRU: %#v", err)
 	}

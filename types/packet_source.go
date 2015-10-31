@@ -22,6 +22,7 @@ package types
 import (
 	"time"
 
+	"github.com/david415/HoneyBadger"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/lytics/anomalyzer"
@@ -35,6 +36,7 @@ type SnifferDriverOptions struct {
 	WireDuration   time.Duration
 	Filter         string
 	AnomalyzerConf *anomalyzer.AnomalyzerConf
+	AlerterConf    *HoneyBadger.AlertingConf
 }
 
 // PacketDataSource is an interface for some source of packet data.

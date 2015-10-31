@@ -95,14 +95,6 @@ func (oe OpticonError) Error() string {
 //Watcher function updates data structures for anomaly analysis
 func PanWatcher(p *Pan, ac *anomalyzer.AnomalyzerConf) {
 	i := 0
-	conf := &anomalyzer.AnomalyzerConf{
-		Sensitivity: 0.2,
-		UpperBound:  10000,
-		LowerBound:  NA, // ignore the lower bound
-		ActiveSize:  1,
-		NSeasons:    4,
-		Methods:     []string{"diff", "fence"},
-	}
 
 	for {
 		i++
@@ -116,7 +108,7 @@ func PanWatcher(p *Pan, ac *anomalyzer.AnomalyzerConf) {
 		//Run alert testing over the transfer Vector
 		//TODO Replace with configurable interval which matches a full dataset
 		if i > 5 {
-			prob, _ := anomalyzer.NewAnomalyzer(conf, *p.gv)
+			prob, _ := anomalyzer.NewAnomalyzer(ac, *p.gv)
 
 			aprob := prob.Eval()
 
