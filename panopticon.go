@@ -124,23 +124,60 @@ func PanWatcher(p *Pan, ac *anomalyzer.AnomalyzerConf) {
 	}
 }
 
+func PanSetup(packetManifest *types.PacketManifest, anomTest chan<- *Pan) chan<- *types.PacketManifest {
+	updateChan := make(chan *types.PacketManifest)
+	p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
+
+	go func() {
+
+		ticker := time.NewTicker(5 * time.Second)
+
+		for {
+			select {
+			case <-ticker.C:
+				p.updates += 1
+				// Run anomalyzer
+				if p.updates > 2 {
+					log.Info("Sending to anomTest")
+					p.Flush()
+					anomTest <- p
+				}
+			case pm := <-updateChan:
+				dlen := len(pm.Payload)
+				p.AddTransfer(uint64(dlen))
+				//log.Infof("Transfered data: %d", p.transfered)
+			}
+		}
+	}()
+
+	return updateChan
+}
+
 //Pan objects watch each IP connection's traffic and total its traffic over time
 type Pan struct {
 	src        string
 	dst        string
 	opened     time.Time
 	Last       time.Time
+	updates    int8
 	transfered uint64
 	//GoVector for evaluation by Anomalyzer
 	gv *govector.Vector
 }
 
-func NewPan(src, dst string, ac *anomalyzer.AnomalyzerConf) *Pan {
+func NewPan(src, dst string) *Pan {
 	g := make(govector.Vector, 10, 10)
 	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0, gv: &g}
 	//Start Goroutine to average intake via channel
-	go PanWatcher(p, ac)
+	//go PanWatcher(p, ac)
 	return p
+}
+
+func (p *Pan) Flush() {
+	p.gv.PushFixed(float64(p.transfered))
+	p.LastUpdate()
+	p.ResetTransfered()
+	p.updates = 0
 }
 
 func (p *Pan) String() string {

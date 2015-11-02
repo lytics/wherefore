@@ -24,6 +24,7 @@ import (
 	"io"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/lytics/anomalyzer"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -49,7 +50,6 @@ type Sniffer struct {
 // NewSniffer creates a new Sniffer struct
 func NewSniffer(options *types.SnifferDriverOptions, dispatcher PacketDispatcher) types.PacketSource {
 	hlru, err := lru.New(500)
-	alertChan := make(chan string)
 	if err != nil {
 		log.Printf("Error creating LRU: %#v", err)
 	}
@@ -146,15 +146,56 @@ func (i *Sniffer) capturePackets() {
 	}
 }
 
+func (i *Sniffer) AnomalyTester(in <-chan *Pan) {
+	for p := range in {
+		prob, _ := anomalyzer.NewAnomalyzer(i.options.AnomalyzerConf, *p.gv)
+
+		aprob := prob.Eval()
+		log.Infof("Recieved: %#v: %#v:\n%f", p.String(), p.gv, aprob)
+		if aprob > 0.0 {
+			log.Infof("Anomalyzer %s score: %v", p.String(), aprob)
+		}
+		if aprob > 0.5 {
+			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
+		}
+	}
+}
+
+//Intakes PacketManifests and hands them to the updater channels for
+// PanMonitors if they exist, and creates them if they're new.
+func (i *Sniffer) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan) {
+	//Derive packet key and either update data transfered or
+	//  create new Pan struct/goroutine watcher.
+	lkey := LRUKey(pm.IP.SrcIP.String(), pm.IP.DstIP.String())
+
+	if pmChan, ok := i.LRU.Get(lkey); ok {
+		//Send the packet manifest to the updater channel
+		pmChan.(chan<- *types.PacketManifest) <- pm
+	} else {
+		// Create the Pan struct/goroutine
+		upChan := PanSetup(pm, anomalyTest)
+		// Add the returned updater channel into the LRU
+		if ok := i.LRU.Add(lkey, upChan); !ok {
+			log.Debugf("lkey created successfully")
+		} else {
+			log.Errorf("Error creating LRU k-v! %#v", ok)
+		}
+	}
+}
+
 func (i *Sniffer) decodePackets() {
 	var eth layers.Ethernet
 	var ip layers.IPv4
 	var tcp layers.TCP
 	var payload gopacket.Payload
+	anomalyTest := make(chan *Pan)
 
 	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip, &tcp, &payload)
 	decoded := make([]gopacket.LayerType, 0, 4)
-	go CacheInfo(i.LRU)
+	//go CacheInfo(i.LRU)
+	for at := 0; at < 10; at++ {
+		go i.AnomalyTester(anomalyTest)
+	}
 
 	for {
 		select {
@@ -182,22 +223,26 @@ func (i *Sniffer) decodePackets() {
 				continue
 			}*/
 
+			i.PMMonitor(&packetManifest, anomalyTest)
+
 			//Derive packet key and either update data transfered or
 			//  create new Pan struct/goroutine watcher.
-			lkey := LRUKey(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
-			dlen := len(packetManifest.Payload)
-			if val, ok := i.LRU.Get(lkey); ok {
-				pval := val.(*Pan)
-				//log.Debugf("%-15s -> %15s ::: %d -> %d\n", packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), pval.Transfered(), pval.Transfered()+uint64(dlen))
-				pval.AddTransfer(uint64(dlen))
-			} else {
-				log.Debugf("lkey %s not found, creating new cache entry", lkey)
-				p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), i.options.AnomalyzerConf)
-				p.AddTransfer(uint64(dlen))
-				if ok := i.LRU.Add(lkey, p); ok {
-					log.Infof("lkey created successfully")
+			/*
+				lkey := LRUKey(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
+				dlen := len(packetManifest.Payload)
+				if val, ok := i.LRU.Get(lkey); ok {
+					pval := val.(*Pan)
+					//log.Debugf("%-15s -> %15s ::: %d -> %d\n", packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), pval.Transfered(), pval.Transfered()+uint64(dlen))
+					pval.AddTransfer(uint64(dlen))
+				} else {
+					log.Debugf("lkey %s not found, creating new cache entry", lkey)
+					p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String(), i.options.AnomalyzerConf)
+					p.AddTransfer(uint64(dlen))
+					if ok := i.LRU.Add(lkey, p); ok {
+						log.Infof("lkey created successfully")
+					}
 				}
-			}
+			*/
 
 		}
 	}
