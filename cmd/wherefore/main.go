@@ -66,7 +66,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		slackChannel   = flag.String("slack_channel", "wherefore", "Slack Channel to send messages to")
 		slackHookURL   = flag.String("slack_url", "nil", "Slack Hook URL")
 		slackIconURL   = flag.String("slack_icon", "https://cdn4.iconfinder.com/data/icons/proglyphs-free/512/Invader_1-128.png", "Icon URL for slack message")
-		slackIconEmoji = flag.String("slack_emoji", "warning", "Emoji icon to use for icon instead of URL")
+		slackIconEmoji = flag.String("slack_emoji", ":warning:", "Emoji icon to use for icon instead of URL")
 	)
 	flag.Parse()
 

@@ -155,15 +155,15 @@ func (i *Sniffer) AlertSlack(alertChan chan *Pan) {
 	alerter := slackhook.New(slackConf["slackHookURL"])
 
 	for p := range alertChan {
-		log.Warnf("Alerting Slack: %#v", p)
-		/*
-				message := &slackhook.Message{
-					Text:    fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()),
-					Channel: slackConf["slackChannel"],
-				}
-			log.Infof("SlackMsg: %#v", message)
-		*/
-		err := alerter.Simple(fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()))
+		//log.Warnf("Alerting Slack: %#v", p)
+		message := &slackhook.Message{
+			Text:      fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()),
+			Channel:   slackConf["slackChannel"],
+			IconEmoji: slackConf["slackIconEmoji"],
+		}
+		log.Infof("SlackMsg: %#v", message)
+		//err := alerter.Simple(fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()))
+		err := alerter.Send(message)
 		if err != nil {
 			log.Errorf("Error alerting to slack: %#v", err)
 		}
@@ -259,6 +259,7 @@ func (i *Sniffer) decodePackets() {
 			}*/
 
 			//Pass packet manifest to the PM-Monitor function
+			//TODO: Improve the flow around packet processing from the sniffer/splitter
 			i.PMMonitor(&packetManifest, anomalyTest)
 
 		}
