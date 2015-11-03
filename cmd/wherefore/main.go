@@ -63,12 +63,10 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		anomNSeasons    = flag.Int("anom_n_seasons", 4, "Anomalyzer N Seasons variable")
 		anomMethodsCSL  = flag.String("anom_methods", "diff,fence,highrank,lowrank,magnitude", "Anomalyzer algorithms to test, written in csv format. eg: diff,fence,etc")
 
-	/*
 		slackChannel   = flag.String("slack_channel", "wherefore", "Slack Channel to send messages to")
 		slackHookURL   = flag.String("slack_url", "nil", "Slack Hook URL")
 		slackIconURL   = flag.String("slack_icon", "https://cdn4.iconfinder.com/data/icons/proglyphs-free/512/Invader_1-128.png", "Icon URL for slack message")
 		slackIconEmoji = flag.String("slack_emoji", "warning", "Emoji icon to use for icon instead of URL")
-	*/
 	)
 	flag.Parse()
 
@@ -109,15 +107,13 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 	}
 	log.Debugf("AnomalyzerConf:\n%#v", anomConf)
 
-	/*
-		slackConf := map[string]string{
-			"slackChannel":   *slackChannel,
-			"slackHookURL":   *slackHookURL,
-			"slackIconURL":   *slackIconURL,
-			"slackIconEmoji": *slackIconEmoji,
-		}
-		alerter := &HoneyBadger.AlertingConf{SlackConf: slackConf}
-	*/
+	slackConf := map[string]string{
+		"slackChannel":   *slackChannel,
+		"slackHookURL":   *slackHookURL,
+		"slackIconURL":   *slackIconURL,
+		"slackIconEmoji": *slackIconEmoji,
+	}
+	alerter := &types.AlertingConf{SlackConf: slackConf}
 	snifferDriverOptions := types.SnifferDriverOptions{
 		DAQ:            *daq,
 		Device:         *iface,
@@ -126,7 +122,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		Snaplen:        int32(*snaplen),
 		Filter:         *filter,
 		AnomalyzerConf: anomConf,
-		//AlerterConf:    alerter,
+		AlerterConf:    alerter,
 	}
 	log.Debugf("Sniffer Options:\n%#v", snifferDriverOptions)
 

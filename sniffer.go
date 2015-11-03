@@ -28,6 +28,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/lytics/anomalyzer"
+	"github.com/lytics/slackhook"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -149,9 +150,29 @@ func (i *Sniffer) capturePackets() {
 	}
 }
 
+func (i *Sniffer) AlertSlack(alertChan chan *Pan) {
+	slackConf := i.options.AlerterConf.SlackConf
+	alerter := slackhook.New(slackConf["slackHookURL"])
+
+	for p := range alertChan {
+		log.Warnf("Alerting Slack: %#v", p)
+		/*
+				message := &slackhook.Message{
+					Text:    fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()),
+					Channel: slackConf["slackChannel"],
+				}
+			log.Infof("SlackMsg: %#v", message)
+		*/
+		err := alerter.Simple(fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()))
+		if err != nil {
+			log.Errorf("Error alerting to slack: %#v", err)
+		}
+	}
+}
+
 //Accepting Pan structs, determine if their contained GoVector shows signs of
 // anomalous data.
-func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan) {
+func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *Pan) {
 	for p := range in {
 		prob, _ := anomalyzer.NewAnomalyzer(i.options.AnomalyzerConf, *p.gv)
 
@@ -166,6 +187,7 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan) {
 		if aprob > 0.5 {
 			log.Infof("%#v: %#v:\n%f", p.String(), p.gv, aprob)
 			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
+			alertChan <- &copyP
 		}
 	}
 }
@@ -198,14 +220,17 @@ func (i *Sniffer) decodePackets() {
 	var tcp layers.TCP
 	var payload gopacket.Payload
 	anomalyTest := make(chan *Pan)
+	alertChan := make(chan *Pan)
 
 	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip, &tcp, &payload)
 	decoded := make([]gopacket.LayerType, 0, 4)
 	//go CacheInfo(i.LRU)
 	piChan := PanopticonInfo()
 	for at := 0; at < 10; at++ {
-		go i.AnomalyTester(anomalyTest, piChan)
+		go i.AnomalyTester(anomalyTest, piChan, alertChan)
 	}
+
+	go i.AlertSlack(alertChan)
 
 	for {
 		select {

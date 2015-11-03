@@ -38,7 +38,13 @@ type SnifferDriverOptions struct {
 	WireDuration   time.Duration
 	Filter         string
 	AnomalyzerConf *anomalyzer.AnomalyzerConf
-	//AlerterConf    *HoneyBadger.AlertingConf
+	AlerterConf    *AlertingConf
+}
+
+type AlertingConf struct {
+	SlackConf map[string]string
+	//OpsGenie conf
+	//MozDef conf
 }
 
 // PacketDataSource is an interface for some source of packet data.
