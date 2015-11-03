@@ -157,11 +157,11 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan) {
 		info <- &copyP
 
 		aprob := prob.Eval()
-		log.Infof("Recieved: %#v: %#v:\n%f", p.String(), p.gv, aprob)
 		if aprob > 0.0 {
 			log.Infof("Anomalyzer %s score: %v", p.String(), aprob)
 		}
 		if aprob > 0.5 {
+			log.Infof("%#v: %#v:\n%f", p.String(), p.gv, aprob)
 			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
 		}
 	}
