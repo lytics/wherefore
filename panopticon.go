@@ -138,8 +138,8 @@ func PanSetup(packetManifest *types.PacketManifest, anomTest chan<- *Pan) chan<-
 				p.updates += 1
 				// Run anomalyzer
 				if p.updates > 2 {
-					log.Info("Sending to anomTest")
 					p.Flush()
+					//Send Pan struct to AnomalyTester()
 					anomTest <- p
 				}
 			case pm := <-updateChan:
@@ -202,6 +202,43 @@ func (p *Pan) ResetTransfered() {
 
 func (p *Pan) Age() time.Duration {
 	return time.Now().Sub(p.opened)
+}
+
+func PanopticonInfo() chan *Pan {
+	lru, err := lru.New(500)
+	if err != nil {
+		log.Printf("Error creating LRU: %#v", err)
+	}
+	panIn := make(chan *Pan)
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				//Process the LRU cache and display data
+				log.Infof("########################################################")
+				if pans, err := CacheTopTransfer(lru); err == nil {
+					plen := len(pans)
+					panslen := plen
+					if plen > 10 {
+						plen = 10
+					}
+					for i := 0; i < plen; i++ {
+						j := panslen - 1 - i
+						log.Infof("%-15s -> %15s :: %s :: %8f :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].gv.Mean(), len(*pans[j].gv), *pans[j].gv)
+
+						//Purge cache
+						lru.Purge()
+					}
+				}
+			case p := <-panIn:
+				lru.Add(p.String(), p)
+			}
+		}
+	}()
+
+	return panIn
 }
 
 func CacheInfo(l *lru.Cache) {
