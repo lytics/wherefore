@@ -1,7 +1,10 @@
 /*
- *    HoneyBadger core library for detecting TCP injection attacks
+ *    Wherefore main command line tool for monitoring network traffic
+ *    on a IP stream basis.
  *
- *    Copyright (C) 2014  David Stainton
+ *    Forked from the HoneyBadger core library for detecting TCP injection attacks
+ *
+ *    Copyright (C) 2015 Josh Roppo, Lytics.io, David Stainton
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
