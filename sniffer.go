@@ -25,6 +25,7 @@ package HoneyBadger
 import (
 	"fmt"
 	"io"
+	"net"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/lytics/anomalyzer"
@@ -181,10 +182,10 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 		info <- &copyP
 
 		aprob := prob.Eval()
-		if aprob > 0.0 {
+		if aprob > 0.3 {
 			log.Infof("Anomalyzer %s score: %v", p.String(), aprob)
 		}
-		if aprob > 0.5 {
+		if aprob > 0.6 {
 			log.Infof("%#v: %#v:\n%f", p.String(), p.gv, aprob)
 			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
 			alertChan <- &copyP
@@ -222,6 +223,12 @@ func (i *Sniffer) decodePackets() {
 	anomalyTest := make(chan *Pan)
 	alertChan := make(chan *Pan)
 
+	//_, IPNet, err := net.ParseCIDR("10.240.0.0/16")
+	_, IPNet, err := net.ParseCIDR(i.options.FilterIpCIDR)
+	if err != nil {
+		log.Errorf("Error parsing CIDR: %#v", err)
+	}
+
 	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip, &tcp, &payload)
 	decoded := make([]gopacket.LayerType, 0, 4)
 	//go CacheInfo(i.LRU)
@@ -254,9 +261,18 @@ func (i *Sniffer) decodePackets() {
 			}
 
 			//Short circut to only watch traffic heading in one direction
-			/*if FilterExternal(&packetManifest) == nil {
-				continue
-			}*/
+			//if FilterExternal(&packetManifest) == nil {
+			if i.options.FilterSrc {
+				if i.options.FilterBool && IPNet.Contains(packetManifest.IP.SrcIP) {
+					continue
+				}
+			}
+
+			if i.options.FilterDst {
+				if i.options.FilterBool && IPNet.Contains(packetManifest.IP.DstIP) {
+					continue
+				}
+			}
 
 			//Pass packet manifest to the PM-Monitor function
 			//TODO: Improve the flow around packet processing from the sniffer/splitter

@@ -55,6 +55,13 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		maxNumPcapRotations = flag.Int("max_pcap_rotations", 10, "maximum number of pcap rotations per connection")
 		archiveDir          = flag.String("archive_dir", "", "archive directory for storing attack logs and related pcap files")
 		daq                 = flag.String("daq", "libpcap", "Data AcQuisition packet source")
+
+		//Filtering Configuration
+		filterIpCIDR = flag.String("filter_ip_CIDR", "0.0.0.0/0", "CIDR Mask to allow traffic")
+		filterBool   = flag.Bool("filter_bool", true, "Bool operator to use CIDR filter against")
+		filterSrc    = flag.Bool("filter_src", true, "Filter packets by their source")
+		filterDst    = flag.Bool("filter_dst", true, "Filter packets by their destination")
+
 		//Anomalyzer Configs
 		anomSensetivity = flag.Float64("anom_sensitivity", 2.0, "Anomalyzer sensetivity")
 		anomUpperBound  = flag.Float64("anom_upper_bound", 5.0, "Anomalyzer UpperBound for Fencing")
@@ -63,7 +70,8 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		anomNSeasons    = flag.Int("anom_n_seasons", 4, "Anomalyzer N Seasons variable")
 		anomMethodsCSL  = flag.String("anom_methods", "diff,fence,highrank,lowrank,magnitude", "Anomalyzer algorithms to test, written in csv format. eg: diff,fence,etc")
 
-		slackChannel   = flag.String("slack_channel", "wherefore", "Slack Channel to send messages to")
+		//Slack Alert Configs
+		slackChannel   = flag.String("slack_channel", "#wherefore", "Slack Channel to send messages to")
 		slackHookURL   = flag.String("slack_url", "nil", "Slack Hook URL")
 		slackIconURL   = flag.String("slack_icon", "https://cdn4.iconfinder.com/data/icons/proglyphs-free/512/Invader_1-128.png", "Icon URL for slack message")
 		slackIconEmoji = flag.String("slack_emoji", ":warning:", "Emoji icon to use for icon instead of URL")
@@ -123,6 +131,10 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		Filter:         *filter,
 		AnomalyzerConf: anomConf,
 		AlerterConf:    alerter,
+		FilterIpCIDR:   *filterIpCIDR,
+		FilterBool:     *filterBool,
+		FilterSrc:      *filterSrc,
+		FilterDst:      *filterDst,
 	}
 	log.Debugf("Sniffer Options:\n%#v", snifferDriverOptions)
 

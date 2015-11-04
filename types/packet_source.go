@@ -39,6 +39,10 @@ type SnifferDriverOptions struct {
 	Filter         string
 	AnomalyzerConf *anomalyzer.AnomalyzerConf
 	AlerterConf    *AlertingConf
+	FilterIpCIDR   string
+	FilterBool     bool
+	FilterSrc      bool
+	FilterDst      bool
 }
 
 type AlertingConf struct {
