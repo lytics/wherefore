@@ -41,6 +41,7 @@ func main() {
 		snaplen                  = flag.Int("s", 65536, "SnapLen for pcap packet capture")
 		filter                   = flag.String("f", "tcp", "BPF filter for pcap")
 		logDir                   = flag.String("l", "", "incoming log dir used initially for pcap files if packet logging is enabled")
+		logLevel                 = flag.String("loglevel", "info", "LogLevel: 'debug', 'info', 'warn', 'error', 'fatal', 'panic'?")
 		wireTimeout              = flag.String("w", "3s", "timeout for reading packets off the wire")
 		logPackets               = flag.Bool("log_packets", false, "if set to true then log all packets for each tracked TCP connection")
 		maxConcurrentConnections = flag.Int("max_concurrent_connections", 0, "Maximum number of concurrent connection to track.")
@@ -77,6 +78,9 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		slackIconEmoji = flag.String("slack_emoji", ":warning:", "Emoji icon to use for icon instead of URL")
 	)
 	flag.Parse()
+
+	loglvl, _ := log.ParseLevel(*logLevel)
+	log.SetLevel(loglvl)
 
 	if *daq == "" {
 		log.Fatal("must specify a Data AcQuisition packet source`")

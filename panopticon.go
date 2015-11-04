@@ -32,7 +32,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/david415/HoneyBadger/types"
 	"github.com/drewlanenga/govector"
-	"github.com/lytics/anomalyzer"
 
 	"github.com/hashicorp/golang-lru"
 )
@@ -92,38 +91,8 @@ func (oe OpticonError) Error() string {
 	return fmt.Sprintf("%v: %v", oe.When, oe.What)
 }
 
-//Watcher function updates data structures for anomaly analysis
-func PanWatcher(p *Pan, ac *anomalyzer.AnomalyzerConf) {
-	i := 0
-
-	for {
-		i++
-		select {
-		//TODO: Make time interval configurable
-		case <-time.After(5 * time.Second):
-			p.gv.PushFixed(float64(p.Transfered()))
-			p.LastUpdate()
-			p.ResetTransfered()
-		}
-		//Run alert testing over the transfer Vector
-		//TODO Replace with configurable interval which matches a full dataset
-		if i > 5 {
-			prob, _ := anomalyzer.NewAnomalyzer(ac, *p.gv)
-
-			aprob := prob.Eval()
-
-			if aprob > 0.0 {
-				log.Infof("Anomalyzer %s score: %v", p.String(), aprob)
-			}
-			if aprob > 0.5 {
-				log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
-			}
-
-			i = 0
-		}
-	}
-}
-
+// PanRoutine initializes the PanCtl(Pan) structs and controlling channels,
+//   and the PacketManifest processing goroutine.
 func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, closePan chan *PanCtl) *PanCtl {
 	updateChan := make(chan *types.PacketManifest)
 	stopChan := make(chan bool)
@@ -171,34 +140,6 @@ func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, clos
 	return pCtl
 }
 
-func PanSetup(packetManifest *types.PacketManifest, anomTest chan<- *Pan) chan<- *types.PacketManifest {
-	updateChan := make(chan *types.PacketManifest)
-	p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
-
-	go func() {
-
-		ticker := time.NewTicker(5 * time.Second)
-
-		for {
-			select {
-			case <-ticker.C:
-				p.updates += 1
-
-				// Run anomalyzer
-				p.Flush()
-				//Send Pan struct to AnomalyTester()
-				anomTest <- p
-			case pm := <-updateChan:
-				dlen := len(pm.Payload)
-				p.AddTransfer(uint64(dlen))
-				//log.Infof("Transfered data: %d", p.transfered)
-			}
-		}
-	}()
-
-	return updateChan
-}
-
 type PanCtl struct {
 	P      *Pan
 	PMchan chan *types.PacketManifest
@@ -233,7 +174,7 @@ func (p *Pan) Flush() {
 }
 
 func (p *Pan) String() string {
-	return fmt.Sprintf("%15s -- %15s", p.src, p.dst)
+	return fmt.Sprintf("%14s -> %14s", p.src, p.dst)
 }
 
 func (p *Pan) Transfered() uint64 {
@@ -256,6 +197,8 @@ func (p *Pan) Age() time.Duration {
 	return time.Now().Sub(p.opened)
 }
 
+// Creates an LRU cache for only purpose of collecting statitics about the
+// connections currently active.
 func PanopticonInfo() chan *Pan {
 	lru, err := lru.New(500)
 	if err != nil {
@@ -273,13 +216,15 @@ func PanopticonInfo() chan *Pan {
 				if pans, err := CacheTopTransfer(lru); err == nil {
 					plen := len(pans)
 					panslen := plen
-					log.Debugf("Pans found in PanInfo cache: %d", panslen)
-					if plen > 10 {
-						plen = 10
+					log.Infof("Pans found in PanInfo cache: %d", panslen)
+
+					panLimit := 10
+					if plen > panLimit {
+						plen = panLimit
 					}
 					for i := 0; i < plen; i++ {
 						j := panslen - 1 - i
-						log.Infof("%-15s -> %15s :: %s :: %8f :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].gv.Mean(), len(*pans[j].gv), *pans[j].gv)
+						log.Infof("%-16s -> %16s :: %s :: %8f :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].gv.Mean(), len(*pans[j].gv), *pans[j].gv)
 
 						//Purge cache
 						lru.Purge()
@@ -292,32 +237,6 @@ func PanopticonInfo() chan *Pan {
 	}()
 
 	return panIn
-}
-
-func CacheInfo(l *lru.Cache) {
-	log.Errorf("\nWe're running CacheInfo right? %#v\n", l)
-	for {
-
-		select {
-		case <-time.After(10 * time.Second):
-			//log.Errorf("LRU cache[%d]\nKeys: %#v\n", l.Len(), l.Keys())
-			log.Infof("########################################################")
-			if pans, err := CacheTopTransfer(l); err == nil {
-				plen := len(pans)
-				panslen := plen
-				if plen > 10 {
-					plen = 10
-				}
-				for i := 0; i < plen; i++ {
-					j := panslen - 1 - i
-					log.Infof("%-15s -> %15s :: %s :: %8f :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].gv.Mean(), len(*pans[j].gv), *pans[j].gv)
-				}
-			} else {
-				log.Errorf("Error finding the top Transfered connections: %v", err)
-			}
-		}
-
-	}
 }
 
 //Iterate over all IPkeys in the LRU Cache and extract their Pan struct
