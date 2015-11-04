@@ -195,23 +195,32 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 
 //Intakes PacketManifests and hands them to the updater channels for
 // PanMonitors if they exist, and creates them if they're new.
-func (i *Sniffer) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan) {
+func (i *Sniffer) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, closePan chan *PanCtl) {
 	//Derive packet key and either update data transfered or
 	//  create new Pan struct/goroutine watcher.
 	lkey := LRUKey(pm.IP.SrcIP.String(), pm.IP.DstIP.String())
 
-	if pmChan, ok := i.LRU.Get(lkey); ok {
-		//Send the packet manifest to the updater channel
-		pmChan.(chan<- *types.PacketManifest) <- pm
+	if pmCtl, ok := i.LRU.Get(lkey); ok {
+		// Send the packet manifest to the updater channel
+		pmCtl.(*PanCtl).PMchan <- pm
 	} else {
 		// Create the Pan struct/goroutine
-		upChan := PanSetup(pm, anomalyTest)
+		panCtl := PanRoutine(pm, anomalyTest, closePan)
 		// Add the returned updater channel into the LRU
-		if ok := i.LRU.Add(lkey, upChan); !ok {
+		if ok := i.LRU.Add(lkey, panCtl); !ok {
 			log.Debugf("lkey created successfully")
 		} else {
 			log.Errorf("Error creating LRU k-v! %#v", ok)
 		}
+	}
+}
+
+func (i *Sniffer) PanRemover(panCtls chan *PanCtl) {
+	for pCtl := range panCtls {
+		lkey := LRUKey(pCtl.P.src, pCtl.P.dst)
+		log.Debugf("Removing Pan: %s from cache[%d]\n%#v", lkey, i.LRU.Len(), *pCtl.P.gv)
+		i.LRU.Remove(lkey)
+		close(pCtl.Stop)
 	}
 }
 
@@ -222,6 +231,7 @@ func (i *Sniffer) decodePackets() {
 	var payload gopacket.Payload
 	anomalyTest := make(chan *Pan)
 	alertChan := make(chan *Pan)
+	panClose := make(chan *PanCtl)
 
 	//_, IPNet, err := net.ParseCIDR("10.240.0.0/16")
 	_, IPNet, err := net.ParseCIDR(i.options.FilterIpCIDR)
@@ -231,13 +241,13 @@ func (i *Sniffer) decodePackets() {
 
 	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip, &tcp, &payload)
 	decoded := make([]gopacket.LayerType, 0, 4)
-	//go CacheInfo(i.LRU)
 	piChan := PanopticonInfo()
 	for at := 0; at < 10; at++ {
 		go i.AnomalyTester(anomalyTest, piChan, alertChan)
 	}
 
 	go i.AlertSlack(alertChan)
+	go i.PanRemover(panClose)
 
 	for {
 		select {
@@ -276,7 +286,7 @@ func (i *Sniffer) decodePackets() {
 
 			//Pass packet manifest to the PM-Monitor function
 			//TODO: Improve the flow around packet processing from the sniffer/splitter
-			i.PMMonitor(&packetManifest, anomalyTest)
+			i.PMMonitor(&packetManifest, anomalyTest, panClose)
 
 		}
 	}

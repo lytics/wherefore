@@ -124,6 +124,53 @@ func PanWatcher(p *Pan, ac *anomalyzer.AnomalyzerConf) {
 	}
 }
 
+func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, closePan chan *PanCtl) *PanCtl {
+	updateChan := make(chan *types.PacketManifest)
+	stopChan := make(chan bool)
+	p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
+	pCtl := &PanCtl{P: p, PMchan: updateChan, Stop: stopChan}
+
+	go func() {
+
+		ticker := time.NewTicker(5 * time.Second)
+		breakFor := false
+		breakerCount := 0
+
+		for {
+			select {
+			case <-stopChan:
+				breakFor = true
+				log.Warnf("Stop command received for goutine listener %s", p.String())
+			case <-ticker.C:
+				p.updates += 1
+
+				if p.transfered == 0 {
+					breakerCount++
+					if breakerCount > 5 {
+						log.Debugf("Breaker count stopping goroutine listener for %s", p.String())
+						closePan <- pCtl
+					}
+				} else {
+					breakerCount = 0
+				}
+				// Run anomalyzer
+				// Send Pan struct to AnomalyTester()
+				anomTest <- p
+				p.Flush()
+			case pm := <-updateChan:
+				dlen := len(pm.Payload)
+				p.AddTransfer(uint64(dlen))
+			}
+			if breakFor {
+				log.Warnf("Stopping goroutine handling: %s", p.String())
+				break
+			}
+		}
+	}()
+
+	return pCtl
+}
+
 func PanSetup(packetManifest *types.PacketManifest, anomTest chan<- *Pan) chan<- *types.PacketManifest {
 	updateChan := make(chan *types.PacketManifest)
 	p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
@@ -136,12 +183,11 @@ func PanSetup(packetManifest *types.PacketManifest, anomTest chan<- *Pan) chan<-
 			select {
 			case <-ticker.C:
 				p.updates += 1
+
 				// Run anomalyzer
-				if p.updates > 2 {
-					p.Flush()
-					//Send Pan struct to AnomalyTester()
-					anomTest <- p
-				}
+				p.Flush()
+				//Send Pan struct to AnomalyTester()
+				anomTest <- p
 			case pm := <-updateChan:
 				dlen := len(pm.Payload)
 				p.AddTransfer(uint64(dlen))
@@ -151,6 +197,12 @@ func PanSetup(packetManifest *types.PacketManifest, anomTest chan<- *Pan) chan<-
 	}()
 
 	return updateChan
+}
+
+type PanCtl struct {
+	P      *Pan
+	PMchan chan *types.PacketManifest
+	Stop   chan bool
 }
 
 //Pan objects watch each IP connection's traffic and total its traffic over time
@@ -221,6 +273,7 @@ func PanopticonInfo() chan *Pan {
 				if pans, err := CacheTopTransfer(lru); err == nil {
 					plen := len(pans)
 					panslen := plen
+					log.Debugf("Pans found in PanInfo cache: %d", panslen)
 					if plen > 10 {
 						plen = 10
 					}
@@ -277,20 +330,22 @@ func CacheTopTransfer(l *lru.Cache) ([]*Pan, error) {
 	for _, k := range keys {
 		if p, ok := l.Get(k); ok {
 			P := p.(*Pan)
+			/*
+				//Calculate if there's been recent transfer on this stream
+				plen := len(*P.gv)
+				recentTransfer := 0.0
+				//Check the last 30 seconds for any transfer; if none skip
+				for i := 1; i < 7; i++ {
+					gv := *P.gv
+					recentTransfer += gv[plen-i]
+				}
 
-			//Calculate if there's been recent transfer on this stream
-			plen := len(*P.gv)
-			recentTransfer := 0.0
-			//Check the last 30 seconds for any transfer; if none skip
-			for i := 1; i < 7; i++ {
-				gv := *P.gv
-				recentTransfer += gv[plen-i]
-			}
-
-			//if recent transfer add to list for sorting.
-			if recentTransfer > 0 {
-				pancons = append(pancons, P)
-			}
+				//if recent transfer add to list for sorting.
+				if recentTransfer > 0 {
+					pancons = append(pancons, P)
+				}
+			*/
+			pancons = append(pancons, P)
 		} else {
 			return nil, OpticonError{time.Now(), fmt.Sprintf("Failed to Get[%s] from LRU cache", k)}
 		}
