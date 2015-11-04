@@ -1,0 +1,13 @@
+github.com/Sirupsen/logrus cdd90c38c6e3718c731b555b9c3ed1becebec3ba
+github.com/bmizerany/assert e17e99893cb6509f428e1728281c2ad60a6b31e3
+github.com/drewlanenga/govector e9d8d61e0d2fb2af6717ae74f04a25c59c452542
+github.com/fatih/color 8640971291e54b520f781270275b7ed8762ac909
+github.com/google/gopacket 1b0b78901cdd351ecfc68bf1a2adafcd2ff30220
+github.com/hashicorp/golang-lru d85392d6bc30546d352f52f2632814cde4201d44
+github.com/kr/pretty f31442d60e51465c69811e2107ae978868dbea5c
+github.com/kr/text 6807e777504f54ad073ecef66747de158294b639
+github.com/lytics/anomalyzer 93e3b0706f316002357c03d035c85a00174c4795
+github.com/lytics/slackhook cfd33260012e8372c31332a589849faed72f713f
+github.com/mattn/go-isatty 7fcbc72f853b92b5720db4a6b8482be612daef24
+github.com/shiena/ansicolor a5e2b567a4dd6cc74545b8a4f27c9d63b9e7735b
+golang.org/x/net 01256db42e5106196a3473ec1620727a383500e8
