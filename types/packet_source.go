@@ -78,10 +78,15 @@ type PacketSource interface {
 
 // PacketManifest is used to send parsed packets via channels to other goroutines
 type PacketManifest struct {
-	Timestamp time.Time
-	Flow      *TcpIpFlow
-	RawPacket []byte
-	IP        layers.IPv4
-	TCP       layers.TCP
-	Payload   gopacket.Payload
+	Timestamp     time.Time
+	Flow          *TcpIpFlow
+	RawPacket     []byte
+	DecodedLayers []gopacket.LayerType
+	Eth           layers.Ethernet
+	IP            layers.IPv4
+	IPv4          layers.IPv4
+	IPv6          layers.IPv6
+	TCP           layers.TCP
+	UDP           layers.UDP
+	Payload       gopacket.Payload
 }

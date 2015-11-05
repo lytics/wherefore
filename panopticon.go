@@ -23,6 +23,7 @@
 package HoneyBadger
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"net"
@@ -32,6 +33,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/david415/HoneyBadger/types"
 	"github.com/drewlanenga/govector"
+	"github.com/google/gopacket/layers"
 
 	"github.com/hashicorp/golang-lru"
 )
@@ -128,6 +130,7 @@ func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, clos
 				p.Flush()
 			case pm := <-updateChan:
 				dlen := len(pm.Payload)
+				p.lastPM = pm
 				p.AddTransfer(uint64(dlen))
 			}
 			if breakFor {
@@ -138,6 +141,31 @@ func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, clos
 	}()
 
 	return pCtl
+}
+
+func DecodeLayersInfo(p *types.PacketManifest) string {
+	var buffer bytes.Buffer
+
+	for _, typ := range p.DecodedLayers {
+		switch typ {
+		case layers.LayerTypeEthernet:
+			buffer.WriteString(fmt.Sprintf("    Eth %v -> %v", p.Eth.SrcMAC, p.Eth.DstMAC))
+			buffer.WriteString("\n")
+		case layers.LayerTypeIPv4:
+			buffer.WriteString(fmt.Sprintf("    IP4 %v -> %v", p.IPv4.SrcIP, p.IPv4.DstIP))
+			buffer.WriteString("\n")
+		case layers.LayerTypeIPv6:
+			buffer.WriteString(fmt.Sprintf("    IP6 %v -> %v", p.IPv6.SrcIP, p.IPv6.DstIP))
+			buffer.WriteString("\n")
+		case layers.LayerTypeTCP:
+			buffer.WriteString(fmt.Sprintf("    TCP %v -> %v", p.TCP.SrcPort, p.TCP.DstPort))
+			buffer.WriteString("\n")
+		case layers.LayerTypeUDP:
+			buffer.WriteString(fmt.Sprintf("    UDP %v -> %v", p.UDP.SrcPort, p.UDP.DstPort))
+			buffer.WriteString("\n")
+		}
+	}
+	return buffer.String()
 }
 
 type PanCtl struct {
@@ -155,7 +183,8 @@ type Pan struct {
 	updates    int8
 	transfered uint64
 	//GoVector for evaluation by Anomalyzer
-	gv *govector.Vector
+	gv     *govector.Vector
+	lastPM *types.PacketManifest
 }
 
 func NewPan(src, dst string) *Pan {

@@ -157,8 +157,11 @@ func (i *Sniffer) AlertSlack(alertChan chan *Pan) {
 
 	for p := range alertChan {
 		//log.Warnf("Alerting Slack: %#v", p)
+		msgTxt := "wherefore detected anomylous traffic\n"
+		msgTxt += DecodeLayersInfo(p.lastPM)
+
 		message := &slackhook.Message{
-			Text:      fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()),
+			Text:      msgTxt,
 			Channel:   slackConf["slackChannel"],
 			IconEmoji: slackConf["slackIconEmoji"],
 		}
@@ -186,7 +189,7 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 			log.Infof("Anomalyzer %s score: %v", p.String(), aprob)
 		}
 		if aprob > 0.6 {
-			log.Infof("%#v: %#v:\n%f", p.String(), p.gv, aprob)
+			log.Warnf("%#v: %#v:\n%f", p.String(), p.gv, aprob)
 			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
 			alertChan <- &copyP
 		}
@@ -215,6 +218,8 @@ func (i *Sniffer) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, clo
 	}
 }
 
+// Accepting PanCtl structs via the passed channel
+//  Runs necessary steps to free the Pan from cache and close goroutine
 func (i *Sniffer) PanRemover(panCtls chan *PanCtl) {
 	for pCtl := range panCtls {
 		lkey := LRUKey(pCtl.P.src, pCtl.P.dst)
@@ -227,7 +232,9 @@ func (i *Sniffer) PanRemover(panCtls chan *PanCtl) {
 func (i *Sniffer) decodePackets() {
 	var eth layers.Ethernet
 	var ip layers.IPv4
+	var ipv6 layers.IPv6
 	var tcp layers.TCP
+	var udp layers.UDP
 	var payload gopacket.Payload
 	anomalyTest := make(chan *Pan)
 	alertChan := make(chan *Pan)
@@ -239,13 +246,15 @@ func (i *Sniffer) decodePackets() {
 		log.Errorf("Error parsing CIDR: %#v", err)
 	}
 
-	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip, &tcp, &payload)
-	decoded := make([]gopacket.LayerType, 0, 4)
+	decodedLen := 6
+	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip, &ipv6, &tcp, &udp, &payload)
+	decoded := make([]gopacket.LayerType, 0, decodedLen)
+
+	// Initialize wherefore goroutines
 	piChan := PanopticonInfo()
 	for at := 0; at < 10; at++ {
 		go i.AnomalyTester(anomalyTest, piChan, alertChan)
 	}
-
 	go i.AlertSlack(alertChan)
 	go i.PanRemover(panClose)
 
@@ -260,14 +269,25 @@ func (i *Sniffer) decodePackets() {
 			if err != nil {
 				continue
 			}
+
 			flow := types.NewTcpIpFlowFromFlows(ip.NetworkFlow(), tcp.TransportFlow())
+			dcopy := make([]gopacket.LayerType, decodedLen, decodedLen)
+			if dc := copy(dcopy, decoded); dc <= 0 {
+				log.Errorf("Copy of decoded layers failed: %d", dc)
+				continue
+			}
 			packetManifest := types.PacketManifest{
-				Timestamp: timedRawPacket.Timestamp,
-				Flow:      flow,
-				RawPacket: timedRawPacket.RawPacket,
-				IP:        ip,
-				TCP:       tcp,
-				Payload:   payload,
+				Timestamp:     timedRawPacket.Timestamp,
+				Flow:          flow,
+				RawPacket:     timedRawPacket.RawPacket,
+				DecodedLayers: dcopy,
+				Eth:           eth,
+				IP:            ip,
+				IPv4:          ip,
+				IPv6:          ipv6,
+				TCP:           tcp,
+				UDP:           udp,
+				Payload:       payload,
 			}
 
 			//Short circut to only watch traffic heading in one direction
