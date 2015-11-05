@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"runtime"
 	"sort"
 	"time"
 
@@ -246,6 +247,7 @@ func PanopticonInfo() chan *Pan {
 					plen := len(pans)
 					panslen := plen
 					log.Infof("Pans found in PanInfo cache: %d", panslen)
+					log.Infof("Goroutines running:          %d", runtime.NumGoroutine())
 
 					panLimit := 10
 					if plen > panLimit {
