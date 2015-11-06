@@ -174,6 +174,36 @@ func DecodeLayersInfo(p *types.PacketManifest) string {
 	return buffer.String()
 }
 
+func DecodeLayersMap(p *types.PacketManifest) map[string]interface{} {
+	layerMap := make(map[string]interface{})
+
+	for _, typ := range p.DecodedLayers {
+		switch typ {
+		case layers.LayerTypeEthernet:
+			//fmt.Sprintf("    Eth %v -> %v", p.Eth.SrcMAC, p.Eth.DstMAC))
+			layerMap["EthSrcMAC"] = fmt.Sprintf("%v", p.Eth.SrcMAC)
+			layerMap["EthSrcMAC"] = fmt.Sprintf("%v", p.Eth.DstMAC)
+		case layers.LayerTypeIPv4:
+			//buffer.WriteString(fmt.Sprintf("    IP4 %v -> %v", p.IPv4.SrcIP, p.IPv4.DstIP))
+			layerMap["IPv4SrcIP"] = fmt.Sprintf("%v", p.IPv4.SrcIP)
+			layerMap["IPv4DstIP"] = fmt.Sprintf("%v", p.IPv4.DstIP)
+		case layers.LayerTypeIPv6:
+			//buffer.WriteString(fmt.Sprintf("    IP6 %v -> %v", p.IPv6.SrcIP, p.IPv6.DstIP))
+			layerMap["IPv6SrcIP"] = fmt.Sprintf("%v", p.IPv6.SrcIP)
+			layerMap["IPv6DstIP"] = fmt.Sprintf("%v", p.IPv6.DstIP)
+		case layers.LayerTypeTCP:
+			//buffer.WriteString(fmt.Sprintf("    TCP %v -> %v", p.TCP.SrcPort, p.TCP.DstPort))
+			layerMap["TCPSrcPort"] = fmt.Sprintf("%v", p.TCP.SrcPort)
+			layerMap["TCPDstPort"] = fmt.Sprintf("%v", p.TCP.DstPort)
+		case layers.LayerTypeUDP:
+			//buffer.WriteString(fmt.Sprintf("    UDP %v -> %v", p.UDP.SrcPort, p.UDP.DstPort))
+			layerMap["UDPSrcPort"] = fmt.Sprintf("%v", p.UDP.SrcPort)
+			layerMap["UDPDstPort"] = fmt.Sprintf("%v", p.UDP.DstPort)
+		}
+	}
+	return layerMap
+}
+
 type PanCtl struct {
 	P      *Pan
 	PMchan chan *types.PacketManifest
