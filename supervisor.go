@@ -20,10 +20,10 @@
 package HoneyBadger
 
 import (
-	"log"
 	"os"
 	"os/signal"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/david415/HoneyBadger/types"
 )
 
@@ -65,12 +65,11 @@ func (b Supervisor) GetSniffer() types.PacketSource {
 }
 
 func (b Supervisor) Stopped() {
-	log.Print("Supervisor.Stopped()")
+	log.Info("Supervisor.Stopped()")
 	b.childStoppedChan <- true
 }
 
 func (b Supervisor) Run() {
-	log.Println("HoneyBadger: comprehensive TCP injection attack detection.")
 	b.dispatcher.Start()
 	b.sniffer.Start()
 
@@ -78,10 +77,10 @@ func (b Supervisor) Run() {
 
 	select {
 	case <-b.forceQuitChan:
-		log.Print("graceful shutdown: user force quit")
+		log.Warn("graceful shutdown: user force quit")
 		b.dispatcher.Stop()
 		b.sniffer.Stop()
 	case <-b.childStoppedChan:
-		log.Print("graceful shutdown: packet-source stopped")
+		log.Info("graceful shutdown: packet-source stopped")
 	}
 }

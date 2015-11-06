@@ -15,10 +15,11 @@
 package HoneyBadger
 
 import (
+	"time"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/david415/HoneyBadger/types"
 	"github.com/google/gopacket/layers"
-	"log"
-	"time"
 )
 
 const pageBytes = 1900
@@ -66,7 +67,7 @@ func (c *pageCache) grow() {
 		c.free = append(c.free, &pages[i])
 	}
 	if memLog {
-		log.Println("PageCache: created", c.pcSize, "new pages")
+		log.Debug("PageCache: created", c.pcSize, "new pages")
 	}
 	c.pcSize *= 2
 }
@@ -76,7 +77,7 @@ func (c *pageCache) next(ts time.Time) (p *page) {
 	if memLog {
 		c.pageRequests++
 		if c.pageRequests&0xFFFF == 0 {
-			log.Println("PageCache:", c.pageRequests, "requested,", c.used, "used,", len(c.free), "free")
+			log.Debug("PageCache:", c.pageRequests, "requested,", c.used, "used,", len(c.free), "free")
 		}
 	}
 	if len(c.free) == 0 {

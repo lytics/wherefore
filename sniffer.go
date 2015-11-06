@@ -210,8 +210,16 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 		}
 		if aprob > 0.6 {
 			log.Debugf("%#v: %#v:\n%f", p.String(), p.gv, aprob)
-			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
-			alertLog.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
+			log.Warnf("Anomaly detected:%s %#v", p.String(), *p.gv)
+			/*
+				layers := DecodeLayersMap(p)
+				layers["vector"] = *p.gv
+				layers["vector"] = p.String()
+			*/
+			alertLog.WithFields(log.Fields{
+				"vector": *p.gv,
+				"flow":   p.String(),
+			}).Warnf("Anomaly detected: %s", p.String())
 			fw.Flush()
 			alertChan <- &copyP
 		}
