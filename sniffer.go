@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/lytics/anomalyzer"
@@ -157,15 +158,17 @@ func (i *Sniffer) AlertSlack(alertChan chan *Pan) {
 
 	for p := range alertChan {
 		//log.Warnf("Alerting Slack: %#v", p)
-		msgTxt := "wherefore detected anomylous traffic\n"
+		hname, _ := os.Hostname()
+		msgTxt := fmt.Sprintf("wherefore detected anomylous traffic: %s\n", hname)
 		msgTxt += DecodeLayersInfo(p.lastPM)
+		msgTxt += fmt.Sprintf("%#v\n", p.gv)
 
 		message := &slackhook.Message{
 			Text:      msgTxt,
 			Channel:   slackConf["slackChannel"],
 			IconEmoji: slackConf["slackIconEmoji"],
 		}
-		log.Infof("SlackMsg: %#v", message)
+		log.Debugf("SlackMsg: %#v", message)
 		//err := alerter.Simple(fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()))
 		err := alerter.Send(message)
 		if err != nil {
@@ -186,10 +189,10 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 
 		aprob := prob.Eval()
 		if aprob > 0.3 {
-			log.Infof("Anomalyzer %s score: %v", p.String(), aprob)
+			log.Debugf("Anomalyzer %s score: %v", p.String(), aprob)
 		}
 		if aprob > 0.6 {
-			log.Warnf("%#v: %#v:\n%f", p.String(), p.gv, aprob)
+			log.Debugf("%#v: %#v:\n%f", p.String(), p.gv, aprob)
 			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
 			alertChan <- &copyP
 		}

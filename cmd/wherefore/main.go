@@ -70,6 +70,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		anomActiveSize  = flag.Int("anom_active_size", 1, "Anomalyzer Active Size")
 		anomNSeasons    = flag.Int("anom_n_seasons", 4, "Anomalyzer N Seasons variable")
 		anomMethodsCSL  = flag.String("anom_methods", "diff,fence,highrank,lowrank,magnitude", "Anomalyzer algorithms to test, written in csv format. eg: diff,fence,etc")
+		anomGvCap       = flag.Int("anom_gv_cap", 10, "Number of data points to run anomalyzer test over")
 
 		//Slack Alert Configs
 		slackChannel   = flag.String("slack_channel", "#wherefore", "Slack Channel to send messages to")
@@ -116,6 +117,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		ActiveSize:  *anomActiveSize,
 		NSeasons:    *anomNSeasons,
 		Methods:     anomMethods,
+		VectorCap:   *anomGvCap,
 	}
 	log.Debugf("AnomalyzerConf:\n%#v", anomConf)
 

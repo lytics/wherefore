@@ -112,13 +112,13 @@ func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, clos
 			select {
 			case <-stopChan:
 				breakFor = true
-				log.Warnf("Stop command received for goutine listener %s", p.String())
+				log.Debugf("Stop command received for goutine listener %s", p.String())
 			case <-ticker.C:
 				p.updates += 1
 
 				if p.transfered == 0 {
 					breakerCount++
-					if breakerCount > 5 {
+					if breakerCount > 60 {
 						log.Debugf("Breaker count stopping goroutine listener for %s", p.String())
 						closePan <- pCtl
 					}
@@ -135,7 +135,7 @@ func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, clos
 				p.AddTransfer(uint64(dlen))
 			}
 			if breakFor {
-				log.Warnf("Stopping goroutine handling: %s", p.String())
+				log.Debugf("Stopping goroutine handling: %s", p.String())
 				break
 			}
 		}
@@ -147,6 +147,7 @@ func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, clos
 func DecodeLayersInfo(p *types.PacketManifest) string {
 	var buffer bytes.Buffer
 
+	buffer.WriteString(fmt.Sprintf("HostIP: %s\n", ipv4Str))
 	for _, typ := range p.DecodedLayers {
 		switch typ {
 		case layers.LayerTypeEthernet:
@@ -189,10 +190,9 @@ type Pan struct {
 }
 
 func NewPan(src, dst string) *Pan {
-	g := make(govector.Vector, 10, 10)
+	g := make(govector.Vector, 30, 30)
 	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0, gv: &g}
 	//Start Goroutine to average intake via channel
-	//go PanWatcher(p, ac)
 	return p
 }
 
@@ -246,8 +246,8 @@ func PanopticonInfo() chan *Pan {
 				if pans, err := CacheTopTransfer(lru); err == nil {
 					plen := len(pans)
 					panslen := plen
-					log.Infof("Pans found in PanInfo cache: %d", panslen)
-					log.Infof("Goroutines running:          %d", runtime.NumGoroutine())
+					log.Debugf("Pans found in PanInfo cache: %d", panslen)
+					log.Debugf("Goroutines running:          %d", runtime.NumGoroutine())
 
 					panLimit := 10
 					if plen > panLimit {
