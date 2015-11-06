@@ -141,6 +141,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		FilterBool:     *filterBool,
 		FilterSrc:      *filterSrc,
 		FilterDst:      *filterDst,
+		LogDir:         *logDir,
 	}
 	log.Debugf("Sniffer Options:\n%#v", snifferDriverOptions)
 

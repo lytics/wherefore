@@ -43,6 +43,7 @@ type SnifferDriverOptions struct {
 	FilterBool     bool
 	FilterSrc      bool
 	FilterDst      bool
+	LogDir         string
 }
 
 type AlertingConf struct {

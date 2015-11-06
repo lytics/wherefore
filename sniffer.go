@@ -23,11 +23,13 @@
 package HoneyBadger
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net"
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	log "github.com/Sirupsen/logrus"
 	"github.com/lytics/anomalyzer"
 	"github.com/lytics/slackhook"
@@ -180,6 +182,21 @@ func (i *Sniffer) AlertSlack(alertChan chan *Pan) {
 //Accepting Pan structs, determine if their contained GoVector shows signs of
 // anomalous data.
 func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *Pan) {
+	fio, err := os.OpenFile(i.options.LogDir+"/wherefore_anomalies.log", os.O_RDWR|os.O_APPEND|os.O_CREATE, os.FileMode(0644))
+	if err != nil {
+		log.Errorf("Unable to open anomaly file: %#v", err)
+	}
+	defer fio.Close()
+	fw := bufio.NewWriter(fio)
+	loglvl, _ := log.ParseLevel("debug")
+
+	alertLog := &log.Logger{
+		Out:       fw,
+		Formatter: new(logrus.JSONFormatter),
+		Hooks:     make(logrus.LevelHooks),
+		Level:     loglvl,
+	}
+
 	for p := range in {
 		prob, _ := anomalyzer.NewAnomalyzer(i.options.AnomalyzerConf, *p.gv)
 
@@ -194,6 +211,8 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 		if aprob > 0.6 {
 			log.Debugf("%#v: %#v:\n%f", p.String(), p.gv, aprob)
 			log.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
+			alertLog.Warnf("%s Anomaly detected! %#v", p.String(), *p.gv)
+			fw.Flush()
 			alertChan <- &copyP
 		}
 	}
@@ -255,9 +274,11 @@ func (i *Sniffer) decodePackets() {
 
 	// Initialize wherefore goroutines
 	piChan := PanopticonInfo()
-	for at := 0; at < 10; at++ {
-		go i.AnomalyTester(anomalyTest, piChan, alertChan)
-	}
+	/*
+		for at := 0; at < 10; at++ {
+		}
+	*/
+	go i.AnomalyTester(anomalyTest, piChan, alertChan)
 	go i.AlertSlack(alertChan)
 	go i.PanRemover(panClose)
 
