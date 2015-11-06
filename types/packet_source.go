@@ -31,19 +31,20 @@ import (
 )
 
 type SnifferDriverOptions struct {
-	DAQ            string
-	Filename       string
-	Device         string
-	Snaplen        int32
-	WireDuration   time.Duration
-	Filter         string
-	AnomalyzerConf *anomalyzer.AnomalyzerConf
-	AlerterConf    *AlertingConf
-	FilterIpCIDR   string
-	FilterBool     bool
-	FilterSrc      bool
-	FilterDst      bool
-	LogDir         string
+	DAQ              string
+	Filename         string
+	Device           string
+	Snaplen          int32
+	WireDuration     time.Duration
+	Filter           string
+	TransferInterval string
+	AnomalyzerConf   *anomalyzer.AnomalyzerConf
+	AlerterConf      *AlertingConf
+	FilterIpCIDR     string
+	FilterBool       bool
+	FilterSrc        bool
+	FilterDst        bool
+	LogDir           string
 }
 
 type AlertingConf struct {

@@ -96,7 +96,7 @@ func (oe OpticonError) Error() string {
 
 // PanRoutine initializes the PanCtl(Pan) structs and controlling channels,
 //   and the PacketManifest processing goroutine.
-func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, closePan chan *PanCtl) *PanCtl {
+func PanRoutine(packetManifest *types.PacketManifest, interval string, anomTest chan<- *Pan, closePan chan *PanCtl) *PanCtl {
 	updateChan := make(chan *types.PacketManifest)
 	stopChan := make(chan bool)
 	p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
@@ -104,7 +104,11 @@ func PanRoutine(packetManifest *types.PacketManifest, anomTest chan<- *Pan, clos
 
 	go func() {
 
-		ticker := time.NewTicker(5 * time.Second)
+		tickerInterval, err := time.ParseDuration(interval)
+		if err != nil {
+			log.Errorf("Unable to parse string to time duration interval: %#v", err)
+		}
+		ticker := time.NewTicker(tickerInterval)
 		breakFor := false
 		breakerCount := 0
 

@@ -230,7 +230,7 @@ func (i *Sniffer) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, clo
 		pmCtl.(*PanCtl).PMchan <- pm
 	} else {
 		// Create the Pan struct/goroutine
-		panCtl := PanRoutine(pm, anomalyTest, closePan)
+		panCtl := PanRoutine(pm, i.options.TransferInterval, anomalyTest, closePan)
 		// Add the returned updater channel into the LRU
 		if ok := i.LRU.Add(lkey, panCtl); !ok {
 			log.Debugf("lkey created successfully")

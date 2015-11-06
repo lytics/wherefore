@@ -44,6 +44,7 @@ func main() {
 		logLevel                 = flag.String("loglevel", "info", "LogLevel: 'debug', 'info', 'warn', 'error', 'fatal', 'panic'?")
 		wireTimeout              = flag.String("w", "3s", "timeout for reading packets off the wire")
 		logPackets               = flag.Bool("log_packets", false, "if set to true then log all packets for each tracked TCP connection")
+		transferInterval         = flag.String("transfer_interval", "5s", "Interval in seconds to meansure network flow transfer")
 		maxConcurrentConnections = flag.Int("max_concurrent_connections", 0, "Maximum number of concurrent connection to track.")
 		bufferedPerConnection    = flag.Int("connection_max_buffer", 0, `
 Max packets to buffer for a single connection before skipping over a gap in data
@@ -129,19 +130,20 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 	}
 	alerter := &types.AlertingConf{SlackConf: slackConf}
 	snifferDriverOptions := types.SnifferDriverOptions{
-		DAQ:            *daq,
-		Device:         *iface,
-		Filename:       *pcapfile,
-		WireDuration:   wireDuration,
-		Snaplen:        int32(*snaplen),
-		Filter:         *filter,
-		AnomalyzerConf: anomConf,
-		AlerterConf:    alerter,
-		FilterIpCIDR:   *filterIpCIDR,
-		FilterBool:     *filterBool,
-		FilterSrc:      *filterSrc,
-		FilterDst:      *filterDst,
-		LogDir:         *logDir,
+		DAQ:              *daq,
+		Device:           *iface,
+		Filename:         *pcapfile,
+		TransferInterval: *transferInterval,
+		WireDuration:     wireDuration,
+		Snaplen:          int32(*snaplen),
+		Filter:           *filter,
+		AnomalyzerConf:   anomConf,
+		AlerterConf:      alerter,
+		FilterIpCIDR:     *filterIpCIDR,
+		FilterBool:       *filterBool,
+		FilterSrc:        *filterSrc,
+		FilterDst:        *filterDst,
+		LogDir:           *logDir,
 	}
 	log.Debugf("Sniffer Options:\n%#v", snifferDriverOptions)
 
