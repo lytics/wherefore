@@ -174,6 +174,8 @@ func DecodeLayersInfo(p *types.PacketManifest) string {
 	return buffer.String()
 }
 
+// Creates a map of useful Source and Destination information from the PacketManifest
+//  Primarily created for Logging
 func DecodeLayersMap(p *types.PacketManifest) map[string]interface{} {
 	layerMap := make(map[string]interface{})
 

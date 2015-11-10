@@ -214,6 +214,7 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 			layers := DecodeLayersMap(p.lastPM)
 			layers["vector"] = *p.gv
 			layers["flow"] = p.String()
+			layers["anomaly_probability"] = aprob
 			alertLog.WithFields(layers).Warnf("Anomaly detected: %s", p.String())
 			fw.Flush()
 			alertChan <- &copyP
