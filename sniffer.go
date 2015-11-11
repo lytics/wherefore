@@ -59,8 +59,10 @@ type Sniffer struct {
 func NewSniffer(options *types.SnifferDriverOptions, dispatcher PacketDispatcher) types.PacketSource {
 	hlru, err := lru.New(500)
 	if err != nil {
-		log.Printf("Error creating LRU: %#v", err)
+		//No chance of normal functionallity, so panic
+		panic(fmt.Sprintf("Error creating LRU: %#v", err))
 	}
+
 	i := Sniffer{
 		dispatcher:       dispatcher,
 		options:          options,
@@ -191,6 +193,7 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 	fio, err := os.OpenFile(i.options.LogDir+"/wherefore_anomalies.log", os.O_RDWR|os.O_APPEND|os.O_CREATE, os.FileMode(0644))
 	if err != nil {
 		log.Errorf("Unable to open anomaly file: %#v", err)
+		i.Stop()
 	}
 	defer fio.Close()
 	fw := bufio.NewWriter(fio)
@@ -276,6 +279,7 @@ func (i *Sniffer) decodePackets() {
 	_, IPNet, err := net.ParseCIDR(i.options.FilterIpCIDR)
 	if err != nil {
 		log.Errorf("Error parsing CIDR: %#v", err)
+		i.Stop()
 	}
 
 	decodedLen := 6
