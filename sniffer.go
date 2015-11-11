@@ -42,10 +42,10 @@ import (
 	"github.com/hashicorp/golang-lru"
 )
 
-// Sniffer sets up the connection pool and is an abstraction layer for dealing
+// Filter sets up the connection pool and is an abstraction layer for dealing
 // with incoming packets weather they be from a pcap file or directly off the wire.
-type Sniffer struct {
-	options          *types.SnifferDriverOptions
+type Filter struct {
+	options          *types.FilterDriverOptions
 	supervisor       types.Supervisor
 	dispatcher       PacketDispatcher
 	packetDataSource types.PacketDataSourceCloser
@@ -55,15 +55,15 @@ type Sniffer struct {
 	LRU              *lru.Cache
 }
 
-// NewSniffer creates a new Sniffer struct
-func NewSniffer(options *types.SnifferDriverOptions, dispatcher PacketDispatcher) types.PacketSource {
+// NewFilter creates a new Filter struct
+func NewFilter(options *types.FilterDriverOptions, dispatcher PacketDispatcher) types.PacketSource {
 	hlru, err := lru.New(500)
 	if err != nil {
 		//No chance of normal functionallity, so panic
 		panic(fmt.Sprintf("Error creating LRU: %#v", err))
 	}
 
-	i := Sniffer{
+	i := Filter{
 		dispatcher:       dispatcher,
 		options:          options,
 		stopCaptureChan:  make(chan bool),
@@ -74,16 +74,16 @@ func NewSniffer(options *types.SnifferDriverOptions, dispatcher PacketDispatcher
 	return &i
 }
 
-func (i *Sniffer) SetSupervisor(supervisor types.Supervisor) {
+func (i *Filter) SetSupervisor(supervisor types.Supervisor) {
 	i.supervisor = supervisor
 }
 
-func (i *Sniffer) GetStartedChan() chan bool {
+func (i *Filter) GetStartedChan() chan bool {
 	return make(chan bool)
 }
 
 // Start... starts the TCP attack inquisition!
-func (i *Sniffer) Start() {
+func (i *Filter) Start() {
 	// XXX
 	i.setupHandle()
 
@@ -91,7 +91,7 @@ func (i *Sniffer) Start() {
 	go i.decodePackets()
 }
 
-func (i *Sniffer) Stop() {
+func (i *Filter) Stop() {
 	i.stopCaptureChan <- true
 	i.stopDecodeChan <- true
 	if i.packetDataSource != nil {
@@ -99,13 +99,13 @@ func (i *Sniffer) Stop() {
 	}
 }
 
-func (i *Sniffer) setupHandle() {
+func (i *Filter) setupHandle() {
 	var err error
 	var what string
 
-	factory, ok := drivers.Drivers[i.options.DAQ]
+	factory, ok := drivers.FilterDrivers[i.options.DAQ]
 	if !ok {
-		log.Fatal(fmt.Sprintf("%s Sniffer not supported on this system", i.options.DAQ))
+		log.Fatal(fmt.Sprintf("%s Filter not supported on this system", i.options.DAQ))
 	}
 	i.packetDataSource, err = factory(i.options)
 
@@ -122,7 +122,7 @@ func (i *Sniffer) setupHandle() {
 	log.Printf("Starting %s packet capture on %s", i.options.DAQ, what)
 }
 
-func (i *Sniffer) capturePackets() {
+func (i *Filter) capturePackets() {
 
 	tchan := make(chan TimedRawPacket, 0)
 	// XXX does this need a shutdown code path?
@@ -161,7 +161,7 @@ type AlertMessage struct {
 	Layers *map[string]interface{}
 }
 
-func (i *Sniffer) AlertSlack(alertChan chan *AlertMessage) {
+func (i *Filter) AlertSlack(alertChan chan *AlertMessage) {
 	slackConf := i.options.AlerterConf.SlackConf
 	alerter := slackhook.New(slackConf["slackHookURL"])
 
@@ -189,7 +189,7 @@ func (i *Sniffer) AlertSlack(alertChan chan *AlertMessage) {
 
 //Accepting Pan structs, determine if their contained GoVector shows signs of
 // anomalous data.
-func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *AlertMessage) {
+func (i *Filter) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *AlertMessage) {
 	fio, err := os.OpenFile(i.options.LogDir+"/wherefore_anomalies.log", os.O_RDWR|os.O_APPEND|os.O_CREATE, os.FileMode(0644))
 	if err != nil {
 		log.Errorf("Unable to open anomaly file: %#v", err)
@@ -233,7 +233,7 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 
 //Intakes PacketManifests and hands them to the updater channels for
 // PanMonitors if they exist, and creates them if they're new.
-func (i *Sniffer) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, closePan chan *PanCtl) {
+func (i *Filter) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, closePan chan *PanCtl) {
 	//Derive packet key and either update data transfered or
 	//  create new Pan struct/goroutine watcher.
 	lkey := LRUKey(pm.IP.SrcIP.String(), pm.IP.DstIP.String())
@@ -255,7 +255,7 @@ func (i *Sniffer) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, clo
 
 // Accepting PanCtl structs via the passed channel
 //  Runs necessary steps to free the Pan from cache and close goroutine
-func (i *Sniffer) PanRemover(panCtls chan *PanCtl) {
+func (i *Filter) PanRemover(panCtls chan *PanCtl) {
 	for pCtl := range panCtls {
 		lkey := LRUKey(pCtl.P.src, pCtl.P.dst)
 		log.Debugf("Removing Pan: %s from cache[%d]\n%#v", lkey, i.LRU.Len(), *pCtl.P.gv)
@@ -264,7 +264,7 @@ func (i *Sniffer) PanRemover(panCtls chan *PanCtl) {
 	}
 }
 
-func (i *Sniffer) decodePackets() {
+func (i *Filter) decodePackets() {
 	var eth layers.Ethernet
 	var ip layers.IPv4
 	var ipv6 layers.IPv6

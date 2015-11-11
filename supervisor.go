@@ -29,29 +29,35 @@ import (
 
 type SupervisorOptions struct {
 	SnifferDriverOptions *types.SnifferDriverOptions
+	FilterDriverOptions  *types.FilterDriverOptions
 	DispatcherOptions    DispatcherOptions
-	SnifferFactory       func(*types.SnifferDriverOptions, PacketDispatcher) types.PacketSource
-	ConnectionFactory    ConnectionFactory
-	PacketLoggerFactory  types.PacketLoggerFactory
+	//SnifferFactory       func(*types.SnifferDriverOptions, PacketDispatcher) types.PacketSource
+	FilterFactory       func(*types.FilterDriverOptions, PacketDispatcher) types.PacketSource
+	ConnectionFactory   ConnectionFactory
+	PacketLoggerFactory types.PacketLoggerFactory
 }
 
 type Supervisor struct {
 	dispatcher       *Dispatcher
 	sniffer          types.PacketSource
+	filter           types.PacketSource
 	childStoppedChan chan bool
 	forceQuitChan    chan os.Signal
 }
 
 func NewSupervisor(options SupervisorOptions) *Supervisor {
 	dispatcher := NewDispatcher(options.DispatcherOptions, options.ConnectionFactory, options.PacketLoggerFactory)
-	sniffer := options.SnifferFactory(options.SnifferDriverOptions, dispatcher)
+	//sniffer := options.SnifferFactory(options.SnifferDriverOptions, dispatcher)
+	filter := options.FilterFactory(options.FilterDriverOptions, dispatcher)
 	supervisor := Supervisor{
 		forceQuitChan:    make(chan os.Signal, 1),
 		childStoppedChan: make(chan bool, 0),
 		dispatcher:       dispatcher,
-		sniffer:          sniffer,
+		//sniffer:          sniffer,
+		filter: filter,
 	}
-	sniffer.SetSupervisor(supervisor)
+	//sniffer.SetSupervisor(supervisor)
+	filter.SetSupervisor(supervisor)
 	return &supervisor
 }
 
@@ -64,6 +70,11 @@ func (b Supervisor) GetSniffer() types.PacketSource {
 	return b.sniffer
 }
 
+func (b Supervisor) GetFilter() types.PacketSource {
+	// XXX return types.PacketSource(b.sniffer)
+	return b.filter
+}
+
 func (b Supervisor) Stopped() {
 	log.Info("Supervisor.Stopped()")
 	b.childStoppedChan <- true
@@ -71,7 +82,8 @@ func (b Supervisor) Stopped() {
 
 func (b Supervisor) Run() {
 	b.dispatcher.Start()
-	b.sniffer.Start()
+	//b.sniffer.Start()
+	b.filter.Start()
 
 	signal.Notify(b.forceQuitChan, os.Interrupt)
 
@@ -79,7 +91,8 @@ func (b Supervisor) Run() {
 	case <-b.forceQuitChan:
 		log.Warn("graceful shutdown: user force quit")
 		b.dispatcher.Stop()
-		b.sniffer.Stop()
+		//b.sniffer.Stop()
+		b.filter.Stop()
 	case <-b.childStoppedChan:
 		log.Info("graceful shutdown: packet-source stopped")
 	}

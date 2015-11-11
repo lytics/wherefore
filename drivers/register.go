@@ -24,6 +24,7 @@ import (
 )
 
 var Drivers = map[string]func(*types.SnifferDriverOptions) (types.PacketDataSourceCloser, error){}
+var FilterDrivers = map[string]func(*types.FilterDriverOptions) (types.PacketDataSourceCloser, error){}
 
 // Register makes a ethernet sniffer driver available by the provided name.
 // If Register is called twice with the same name or if driver is nil, it panics.
@@ -35,4 +36,15 @@ func SnifferRegister(name string, packetDataSourceCloserFactory func(*types.Snif
 		panic("sniffer: Register called twice for ethernet sniffer " + name)
 	}
 	Drivers[name] = packetDataSourceCloserFactory
+}
+
+func FilterRegister(name string, packetDataSourceCloserFactory func(*types.FilterDriverOptions) (types.PacketDataSourceCloser, error)) {
+
+	if packetDataSourceCloserFactory == nil {
+		panic("Filter: packetDataSourceCloserFactory is nil")
+	}
+	if _, dup := FilterDrivers[name]; dup {
+		panic("Filter: Register called twice for ethernet filter " + name)
+	}
+	FilterDrivers[name] = packetDataSourceCloserFactory
 }

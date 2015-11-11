@@ -129,7 +129,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		"slackIconEmoji": *slackIconEmoji,
 	}
 	alerter := &types.AlertingConf{SlackConf: slackConf}
-	snifferDriverOptions := types.SnifferDriverOptions{
+	filterDriverOptions := types.FilterDriverOptions{
 		DAQ:              *daq,
 		Device:           *iface,
 		Filename:         *pcapfile,
@@ -145,7 +145,7 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		FilterDst:        *filterDst,
 		LogDir:           *logDir,
 	}
-	log.Debugf("Sniffer Options:\n%#v", snifferDriverOptions)
+	log.Debugf("Filter Options:\n%#v", filterDriverOptions)
 
 	connectionFactory := &HoneyBadger.DefaultConnFactory{}
 	var packetLoggerFactory types.PacketLoggerFactory
@@ -157,10 +157,10 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 
 	log.Info("Wherefore: IP stream monitoring and analysis tool")
 	options := HoneyBadger.SupervisorOptions{
-		SnifferDriverOptions: &snifferDriverOptions,
-		SnifferFactory:       HoneyBadger.NewSniffer,
-		ConnectionFactory:    connectionFactory,
-		PacketLoggerFactory:  packetLoggerFactory,
+		FilterDriverOptions: &filterDriverOptions,
+		FilterFactory:       HoneyBadger.NewFilter,
+		ConnectionFactory:   connectionFactory,
+		PacketLoggerFactory: packetLoggerFactory,
 	}
 	supervisor := HoneyBadger.NewSupervisor(options)
 	supervisor.Run()

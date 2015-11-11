@@ -47,6 +47,23 @@ type SnifferDriverOptions struct {
 	LogDir           string
 }
 
+type FilterDriverOptions struct {
+	DAQ              string
+	Filename         string
+	Device           string
+	Snaplen          int32
+	WireDuration     time.Duration
+	Filter           string
+	TransferInterval string
+	AnomalyzerConf   *anomalyzer.AnomalyzerConf
+	AlerterConf      *AlertingConf
+	FilterIpCIDR     string
+	FilterBool       bool
+	FilterSrc        bool
+	FilterDst        bool
+	LogDir           string
+}
+
 type AlertingConf struct {
 	SlackConf map[string]string
 	//OpsGenie conf

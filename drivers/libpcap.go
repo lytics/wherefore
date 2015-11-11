@@ -22,15 +22,17 @@
 package drivers
 
 import (
+	"time"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
-	"time"
 
 	"github.com/david415/HoneyBadger/types"
 )
 
 func init() {
 	SnifferRegister("libpcap", NewPcapSniffer)
+	FilterRegister("libpcap", NewPcapFilter)
 }
 
 type PcapHandle struct {
@@ -38,6 +40,23 @@ type PcapHandle struct {
 }
 
 func NewPcapSniffer(options *types.SnifferDriverOptions) (types.PacketDataSourceCloser, error) {
+	if options.Filename != "" {
+		pcapFileHandle, err := pcap.OpenOffline(options.Filename)
+		pcapHandle := PcapHandle{
+			handle: pcapFileHandle,
+		}
+		return &pcapHandle, err
+	} else {
+		pcapWireHandle, err := pcap.OpenLive(options.Device, options.Snaplen, true, options.WireDuration)
+		pcapHandle := PcapHandle{
+			handle: pcapWireHandle,
+		}
+		err = pcapHandle.handle.SetBPFFilter(options.Filter)
+		return &pcapHandle, err
+	}
+}
+
+func NewPcapFilter(options *types.FilterDriverOptions) (types.PacketDataSourceCloser, error) {
 	if options.Filename != "" {
 		pcapFileHandle, err := pcap.OpenOffline(options.Filename)
 		pcapHandle := PcapHandle{
