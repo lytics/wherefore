@@ -98,7 +98,7 @@ func (oe OpticonError) Error() string {
 //   and the PacketManifest processing goroutine.
 func PanRoutine(packetManifest *types.PacketManifest, interval string, anomTest chan<- *Pan, closePan chan *PanCtl) *PanCtl {
 	updateChan := make(chan *types.PacketManifest)
-	stopChan := make(chan bool)
+	stopChan := make(chan struct{})
 	p := NewPan(packetManifest.IP.SrcIP.String(), packetManifest.IP.DstIP.String())
 	pCtl := &PanCtl{P: p, PMchan: updateChan, Stop: stopChan}
 
@@ -131,8 +131,8 @@ func PanRoutine(packetManifest *types.PacketManifest, interval string, anomTest 
 				}
 				// Run anomalyzer
 				// Send Pan struct to AnomalyTester()
-				anomTest <- p
 				p.Flush()
+				anomTest <- p
 			case pm := <-updateChan:
 				dlen := len(pm.Payload)
 				p.lastPM = pm
@@ -209,7 +209,7 @@ func DecodeLayersMap(p *types.PacketManifest) map[string]interface{} {
 type PanCtl struct {
 	P      *Pan
 	PMchan chan *types.PacketManifest
-	Stop   chan bool
+	Stop   chan struct{}
 }
 
 //Pan objects watch each IP connection's traffic and total its traffic over time
@@ -221,19 +221,26 @@ type Pan struct {
 	updates    int8
 	transfered uint64
 	//GoVector for evaluation by Anomalyzer
-	gv     *govector.Vector
-	lastPM *types.PacketManifest
+	gv         *govector.Vector
+	vectorSize int
+	lastPM     *types.PacketManifest
 }
 
 func NewPan(src, dst string) *Pan {
-	g := make(govector.Vector, 30, 30)
-	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0, gv: &g}
+	vectorSize := 30
+	g := make(govector.Vector, 0, vectorSize)
+	p := &Pan{src: src, dst: dst, opened: time.Now(), transfered: 0, gv: &g, vectorSize: vectorSize}
 	//Start Goroutine to average intake via channel
 	return p
 }
 
 func (p *Pan) Flush() {
-	p.gv.PushFixed(float64(p.transfered))
+	err := p.gv.PushCapped(float64(p.transfered), p.vectorSize)
+	if err != nil {
+		log.Errorf("Error Pushing data to GoVector: %#v", p.gv)
+		//TODO: Reset the data vector
+		//p.gv = make(govector.Vector, 0, 30)
+	}
 	p.LastUpdate()
 	p.ResetTransfered()
 	p.updates = 0

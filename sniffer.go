@@ -154,16 +154,22 @@ func (i *Sniffer) capturePackets() {
 	}
 }
 
-func (i *Sniffer) AlertSlack(alertChan chan *Pan) {
+type AlertMessage struct {
+	P      *Pan
+	Layers *map[string]interface{}
+}
+
+func (i *Sniffer) AlertSlack(alertChan chan *AlertMessage) {
 	slackConf := i.options.AlerterConf.SlackConf
 	alerter := slackhook.New(slackConf["slackHookURL"])
 
 	for p := range alertChan {
 		//log.Warnf("Alerting Slack: %#v", p)
 		hname, _ := os.Hostname()
-		msgTxt := fmt.Sprintf("wherefore detected anomylous traffic: %s\n", hname)
-		msgTxt += DecodeLayersInfo(p.lastPM)
-		msgTxt += fmt.Sprintf("%#v\n", p.gv)
+		layers := *p.Layers
+		msgTxt := fmt.Sprintf("wherefore detected anomylous traffic: %s Probability: %f\n", hname, layers["anomaly_probability"])
+		msgTxt += DecodeLayersInfo(p.P.lastPM)
+		msgTxt += fmt.Sprintf("%#v\n", p.P.gv)
 
 		message := &slackhook.Message{
 			Text:      msgTxt,
@@ -181,7 +187,7 @@ func (i *Sniffer) AlertSlack(alertChan chan *Pan) {
 
 //Accepting Pan structs, determine if their contained GoVector shows signs of
 // anomalous data.
-func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *Pan) {
+func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *AlertMessage) {
 	fio, err := os.OpenFile(i.options.LogDir+"/wherefore_anomalies.log", os.O_RDWR|os.O_APPEND|os.O_CREATE, os.FileMode(0644))
 	if err != nil {
 		log.Errorf("Unable to open anomaly file: %#v", err)
@@ -217,7 +223,7 @@ func (i *Sniffer) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *
 			layers["anomaly_probability"] = aprob
 			alertLog.WithFields(layers).Warnf("Anomaly detected: %s", p.String())
 			fw.Flush()
-			alertChan <- &copyP
+			alertChan <- &AlertMessage{P: &copyP, Layers: &layers}
 		}
 	}
 }
@@ -263,7 +269,7 @@ func (i *Sniffer) decodePackets() {
 	var udp layers.UDP
 	var payload gopacket.Payload
 	anomalyTest := make(chan *Pan)
-	alertChan := make(chan *Pan)
+	alertChan := make(chan *AlertMessage)
 	panClose := make(chan *PanCtl)
 
 	//_, IPNet, err := net.ParseCIDR("10.240.0.0/16")
