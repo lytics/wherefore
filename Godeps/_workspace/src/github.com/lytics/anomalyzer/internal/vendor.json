@@ -1,0 +1,26 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"path": "github.com/bmizerany/assert",
+			"revision": "e17e99893cb6509f428e1728281c2ad60a6b31e3",
+			"revisionTime": "2012-07-16T13:56:30-07:00"
+		},
+		{
+			"path": "github.com/drewlanenga/govector",
+			"revision": "84b8bcb479cd8e30e6b80788686bb77b92fa80dd",
+			"revisionTime": "2015-10-30T11:26:57-07:00"
+		},
+		{
+			"path": "github.com/kr/pretty",
+			"revision": "f31442d60e51465c69811e2107ae978868dbea5c",
+			"revisionTime": "2014-08-11T19:23:19+10:00"
+		},
+		{
+			"path": "github.com/kr/text",
+			"revision": "6807e777504f54ad073ecef66747de158294b639",
+			"revisionTime": "2013-09-10T18:55:32-07:00"
+		}
+	]
+}
