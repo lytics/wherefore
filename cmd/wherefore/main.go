@@ -36,33 +36,25 @@ import (
 
 func main() {
 	var (
-		pcapfile                 = flag.String("pcapfile", "", "pcap filename to read packets from rather than a wire interface.")
-		iface                    = flag.String("i", "eth0", "Interface to get packets from")
-		snaplen                  = flag.Int("s", 65536, "SnapLen for pcap packet capture")
-		filter                   = flag.String("f", "tcp", "BPF filter for pcap")
-		logDir                   = flag.String("l", "", "incoming log dir used initially for pcap files if packet logging is enabled")
-		logLevel                 = flag.String("loglevel", "info", "LogLevel: 'debug', 'info', 'warn', 'error', 'fatal', 'panic'?")
-		wireTimeout              = flag.String("w", "3s", "timeout for reading packets off the wire")
-		logPackets               = flag.Bool("log_packets", false, "if set to true then log all packets for each tracked TCP connection")
-		transferInterval         = flag.String("transfer_interval", "5s", "Interval in seconds to meansure network flow transfer")
-		maxConcurrentConnections = flag.Int("max_concurrent_connections", 0, "Maximum number of concurrent connection to track.")
-		bufferedPerConnection    = flag.Int("connection_max_buffer", 0, `
-Max packets to buffer for a single connection before skipping over a gap in data
-and continuing to stream the connection after the buffer.  If zero or less, this
-is infinite.`)
-		bufferedTotal = flag.Int("total_max_buffer", 0, `
-Max packets to buffer total before skipping over gaps in connections and
-continuing to stream connection data.  If zero or less, this is infinite`)
+		pcapfile            = flag.String("pcapfile", "", "pcap filename to read packets from rather than a wire interface.")
+		iface               = flag.String("i", "eth0", "Interface to get packets from")
+		snaplen             = flag.Int("s", 65536, "SnapLen for pcap packet capture")
+		filter              = flag.String("f", "tcp", "BPF filter for pcap")
+		logDir              = flag.String("log_dir", "", "incoming log dir used initially for pcap files if packet logging is enabled")
+		logLevel            = flag.String("loglevel", "info", "LogLevel: 'debug', 'info', 'warn', 'error', 'fatal', 'panic'?")
+		wireTimeout         = flag.String("w", "3s", "timeout for reading packets off the wire")
+		logPackets          = flag.Bool("log_packets", false, "if set to true then log all packets for each tracked TCP connection")
+		transferInterval    = flag.String("transfer_interval", "5s", "Interval in seconds to meansure network flow transfer")
 		maxPcapLogSize      = flag.Int("max_pcap_log_size", 1, "maximum pcap size per rotation in megabytes")
 		maxNumPcapRotations = flag.Int("max_pcap_rotations", 10, "maximum number of pcap rotations per connection")
 		archiveDir          = flag.String("archive_dir", "", "archive directory for storing attack logs and related pcap files")
 		daq                 = flag.String("daq", "libpcap", "Data AcQuisition packet source")
 
 		//Filtering Configuration
-		filterIpCIDR = flag.String("filter_ip_CIDR", "0.0.0.0/0", "CIDR Mask to allow traffic")
-		filterBool   = flag.Bool("filter_bool", true, "Bool operator to use CIDR filter against")
-		filterSrc    = flag.Bool("filter_src", true, "Filter packets by their source")
-		filterDst    = flag.Bool("filter_dst", true, "Filter packets by their destination")
+		filterIpCIDR = flag.String("filter_cidr_mask", "0.0.0.0/0", "CIDR Mask to allow traffic")
+		filterBool   = flag.Bool("filter_cidr", true, "Bool operator to use CIDR filter against")
+		filterSrc    = flag.Bool("filter_src", false, "Filter packets by their source")
+		filterDst    = flag.Bool("filter_dst", false, "Filter packets by their destination")
 
 		//Anomalyzer Configs
 		anomSensetivity = flag.Float64("anom_sensitivity", 2.0, "Anomalyzer sensetivity")
@@ -74,8 +66,8 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		anomGvCap       = flag.Int("anom_gv_cap", 10, "Number of data points to run anomalyzer test over")
 
 		//Slack Alert Configs
-		slackChannel   = flag.String("slack_channel", "#wherefore", "Slack Channel to send messages to")
-		slackHookURL   = flag.String("slack_url", "nil", "Slack Hook URL")
+		slackChannel   = flag.String("slack_channel", "", "Slack Channel to send messages to")
+		slackHookURL   = flag.String("slack_url", "", "Slack Hook URL")
 		slackIconURL   = flag.String("slack_icon", "https://cdn4.iconfinder.com/data/icons/proglyphs-free/512/Invader_1-128.png", "Icon URL for slack message")
 		slackIconEmoji = flag.String("slack_emoji", ":warning:", "Emoji icon to use for icon instead of URL")
 	)
@@ -97,17 +89,22 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 		log.Fatal("must specify both incoming log dir and archive log dir")
 	}
 
+	var slackConf map[string]string
+	if *slackChannel == "" || *slackHookURL == "" {
+		log.Warnf("Slack channel and URL must be specified in order for webhook to work")
+		slackConf = nil
+	} else {
+		slackConf = map[string]string{
+			"slackChannel":   *slackChannel,
+			"slackHookURL":   *slackHookURL,
+			"slackIconURL":   *slackIconURL,
+			"slackIconEmoji": *slackIconEmoji,
+		}
+	}
+
 	wireDuration, err := time.ParseDuration(*wireTimeout)
 	if err != nil {
 		log.Fatal("invalid wire timeout duration: ", *wireTimeout)
-	}
-
-	if *maxConcurrentConnections == 0 {
-		log.Fatal("maxConcurrentConnections must be specified")
-	}
-
-	if *bufferedPerConnection == 0 || *bufferedTotal == 0 {
-		log.Fatal("connection_max_buffer and total_max_buffer must be set to a non-zero value")
 	}
 
 	anomMethods := strings.Split(*anomMethodsCSL, ",")
@@ -122,12 +119,6 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 	}
 	log.Debugf("AnomalyzerConf:\n%#v", anomConf)
 
-	slackConf := map[string]string{
-		"slackChannel":   *slackChannel,
-		"slackHookURL":   *slackHookURL,
-		"slackIconURL":   *slackIconURL,
-		"slackIconEmoji": *slackIconEmoji,
-	}
 	alerter := &types.AlertingConf{SlackConf: slackConf}
 	filterDriverOptions := types.FilterDriverOptions{
 		DAQ:              *daq,
@@ -165,3 +156,5 @@ continuing to stream connection data.  If zero or less, this is infinite`)
 	supervisor := HoneyBadger.NewSupervisor(options)
 	supervisor.Run()
 }
+
+//TODO: Debug why invalid args don't return an error here

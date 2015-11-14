@@ -181,6 +181,7 @@ func (i *Filter) AlertSlack(alertChan chan *AlertMessage) {
 		log.Debugf("SlackMsg: %#v", message)
 		//err := alerter.Simple(fmt.Sprintf("wherefore detected anomylous traffic: %#v", p.String()))
 		err := alerter.Send(message)
+		//TODO: Debug why invalid args don't return an error here
 		if err != nil {
 			log.Errorf("Error alerting to slack: %#v", err)
 		}
