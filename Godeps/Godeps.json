@@ -1,0 +1,70 @@
+{
+	"ImportPath": "github.com/david415/HoneyBadger",
+	"GoVersion": "go1.4.2",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.8.7-37-g6f383a9",
+			"Rev": "6f383a9b2998dd6f401704269c3e6e192f6175ad"
+		},
+		{
+			"ImportPath": "github.com/bmizerany/assert",
+			"Comment": "release.r60-6-ge17e998",
+			"Rev": "e17e99893cb6509f428e1728281c2ad60a6b31e3"
+		},
+		{
+			"ImportPath": "github.com/drewlanenga/govector",
+			"Rev": "2c3f7cf7f4316a224e530a4f3521136022beab93"
+		},
+		{
+			"ImportPath": "github.com/fatih/color",
+			"Comment": "v0.1-10-g8640971",
+			"Rev": "8640971291e54b520f781270275b7ed8762ac909"
+		},
+		{
+			"ImportPath": "github.com/google/gopacket",
+			"Comment": "v1.1.11-23-g1de0af9",
+			"Rev": "1de0af91d20e032d5c80069ee5b63f023e87d690"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/golang-lru",
+			"Rev": "d85392d6bc30546d352f52f2632814cde4201d44"
+		},
+		{
+			"ImportPath": "github.com/kr/pretty",
+			"Comment": "go.weekly.2011-12-22-24-gf31442d",
+			"Rev": "f31442d60e51465c69811e2107ae978868dbea5c"
+		},
+		{
+			"ImportPath": "github.com/kr/text",
+			"Rev": "6807e777504f54ad073ecef66747de158294b639"
+		},
+		{
+			"ImportPath": "github.com/lytics/anomalyzer",
+			"Rev": "adff7091f8da1f40b7ad72e215ff9938931d8f62"
+		},
+		{
+			"ImportPath": "github.com/lytics/slackhook",
+			"Rev": "cfd33260012e8372c31332a589849faed72f713f"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "7fcbc72f853b92b5720db4a6b8482be612daef24"
+		},
+		{
+			"ImportPath": "github.com/shiena/ansicolor",
+			"Rev": "a5e2b567a4dd6cc74545b8a4f27c9d63b9e7735b"
+		},
+		{
+			"ImportPath": "golang.org/x/net/internal/iana",
+			"Rev": "01256db42e5106196a3473ec1620727a383500e8"
+		},
+		{
+			"ImportPath": "golang.org/x/net/ipv4",
+			"Rev": "01256db42e5106196a3473ec1620727a383500e8"
+		}
+	]
+}
