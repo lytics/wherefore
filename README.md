@@ -4,16 +4,29 @@ Wherefore
 
 Wherefore art thy transfering 1GB/s to a Chinese IP block?
 
+# Project under construction!
+
+There is no current release but progress is being made towards that goal. Stay tuned for more. Master should not be considered stable yet!
+
+## Still TODO:
+
+* [ ] Better Documentation
+* [ ] Use Gopacket's network interface
+  * [ ] Simplify the interface with libpcap/network interface
+* [ ] More alerting mechanisms(OpsGenie, PagerDuty, Webhook, etc)
+
+
 ## Project Goals
 
-* Monitor the network interfaces of a host for anomylous network traffic and connections
+* Monitor the network interfaces of a host for anomylous network traffic and connections 24/7
+  * Useful as a non-daemon handy network traffic analysis tool!
 * Efficient and low overhead monitoring; minimize processor and memory consumption 
-* Concurrent processing of network traffic
+* Concurrent processing of network traffic IP flows
 * Ability to send alert notifications when anomalous traffic is detected
 
 Wherefore is a fork of the TCP attack detection system [Honey Badger](https://github.com/david415/HoneyBadger) created by [David Stainton](https://github.com/david415). A large amount of credit goes to David for building the interface with libpcap. It was used as a base to prototype the basic functionality desired; then layers of the original onion have been peeled back when appropriate. 
 
-The project has been developed and tested for Debian systems. There's a potential for errors on untested systems and configuration.
+The project has been developed and tested for Debian systems. No reason it couldn't run on Fedora/RedHat or libpcap capable systems, but there's a potential for errors on untested systems and configuration.
 
  
 ### Operation
