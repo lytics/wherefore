@@ -43,6 +43,9 @@ const (
 	NA = math.SmallestNonzeroFloat64
 )
 
+//Enforce the Pan interface
+var _ types.Pan = (*Pan)(nil)
+
 var ipv4Str string
 
 func GetLocalIP() string {
@@ -116,14 +119,14 @@ func PanRoutine(packetManifest *types.PacketManifest, interval string, anomTest 
 			select {
 			case <-stopChan:
 				breakFor = true
-				log.Debugf("Stop command received for goutine listener %s", p.String())
+				log.WithFields(log.Fields{"flow": p.String()}).Debugf("Stop command received for goutine listener")
 			case <-ticker.C:
 				p.updates += 1
 
 				if p.transfered == 0 {
 					breakerCount++
 					if breakerCount > 60 {
-						log.Debugf("Breaker count stopping goroutine listener for %s", p.String())
+						log.WithFields(log.Fields{"flow": p.String()}).Debugf("Breaker count stopping goroutine listener")
 						closePan <- pCtl
 					}
 				} else {
@@ -139,7 +142,7 @@ func PanRoutine(packetManifest *types.PacketManifest, interval string, anomTest 
 				p.AddTransfer(uint64(dlen))
 			}
 			if breakFor {
-				log.Debugf("Stopping goroutine handling: %s", p.String())
+				log.WithFields(log.Fields{"flow": p.String()}).Debugf("Stopping goroutine handling")
 				break
 			}
 		}
@@ -237,7 +240,10 @@ func NewPan(src, dst string) *Pan {
 func (p *Pan) Flush() {
 	err := p.gv.PushCapped(float64(p.transfered), p.vectorSize)
 	if err != nil {
-		log.Errorf("Error Pushing data to GoVector: %#v", p.gv)
+		log.WithFields(log.Fields{
+			"error":    err,
+			"govector": p.gv,
+		}).Errorf("Error Pushing data to GoVector")
 		//TODO: Reset the data vector
 		//p.gv = make(govector.Vector, 0, 30)
 	}
@@ -275,7 +281,7 @@ func (p *Pan) Age() time.Duration {
 func PanopticonInfo() chan *Pan {
 	lru, err := lru.New(500)
 	if err != nil {
-		log.Printf("Error creating LRU: %#v", err)
+		log.WithFields(log.Fields{"error": err}).Error("Error creating LRU")
 	}
 	panIn := make(chan *Pan)
 
@@ -289,8 +295,8 @@ func PanopticonInfo() chan *Pan {
 				if pans, err := CacheTopTransfer(lru); err == nil {
 					plen := len(pans)
 					panslen := plen
-					log.Debugf("Pans found in PanInfo cache: %d", panslen)
-					log.Debugf("Goroutines running:          %d", runtime.NumGoroutine())
+					log.WithFields(log.Fields{"len": panslen}).Debugf("Pans found in PanInfo cache")
+					log.Debugf("Goroutines running: %d", runtime.NumGoroutine())
 
 					panLimit := 10
 					if plen > panLimit {
@@ -299,6 +305,14 @@ func PanopticonInfo() chan *Pan {
 					for i := 0; i < plen; i++ {
 						j := panslen - 1 - i
 						log.Infof("%-16s -> %16s :: %s :: %8f :: [%d]%#v", pans[j].src, pans[j].dst, pans[j].opened, pans[j].gv.Mean(), len(*pans[j].gv), *pans[j].gv)
+						log.WithFields(log.Fields{
+							"src":         pans[j].src,
+							"dst":         pans[j].dst,
+							"opened":      pans[j].opened,
+							"mean":        pans[j].gv.Mean(),
+							"govectorLen": len(*pans[j].gv),
+							"govector":    *pans[j].gv,
+						}).Infof("Pan Data")
 
 						//Purge cache
 						lru.Purge()

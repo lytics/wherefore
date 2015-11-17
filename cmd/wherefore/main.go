@@ -84,7 +84,7 @@ func main() {
 		fmt.Printf("Unable to open wherefore log file: %#v", err)
 	}
 	defer fio.Close()
-	fw := bufio.NewWriter(fio)
+	fw := bufio.NewWriterSize(fio, 128)
 
 	loglvl, _ := log.ParseLevel(*logLevel)
 	log.SetOutput(fw)

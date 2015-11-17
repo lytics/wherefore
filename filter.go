@@ -215,16 +215,26 @@ func (i *Filter) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *A
 
 		aprob := prob.Eval()
 		if aprob > 0.3 {
-			log.Debugf("Anomalyzer %s score: %v", p.String(), aprob)
+
+			log.WithFields(log.Fields{
+				"probability": aprob,
+				"flow":        p.String(),
+			}).Debugf("Anomalyzer low score")
+
 		}
 		if aprob > 0.6 {
 			log.Debugf("%#v: %#v:\n%f", p.String(), p.gv, aprob)
-			log.Warnf("Anomaly detected:%s %#v", p.String(), *p.gv)
+			log.WithFields(log.Fields{
+				"flow":     p.String(),
+				"govector": *p.gv,
+			}).Warnf("Anomaly detected")
 			layers := DecodeLayersMap(p.lastPM)
 			layers["vector"] = *p.gv
 			layers["flow"] = p.String()
 			layers["anomaly_probability"] = aprob
-			alertLog.WithFields(layers).Warnf("Anomaly detected: %s", p.String())
+
+			log.WithFields(layers).Warnf("Anomaly Detected")
+			alertLog.WithFields(layers).Warnf("Anomaly detected")
 			fw.Flush()
 			alertChan <- &AlertMessage{P: &copyP, Layers: &layers}
 		}
@@ -246,9 +256,9 @@ func (i *Filter) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, clos
 		panCtl := PanRoutine(pm, i.options.TransferInterval, anomalyTest, closePan)
 		// Add the returned updater channel into the LRU
 		if ok := i.LRU.Add(lkey, panCtl); !ok {
-			log.Debugf("lkey created successfully")
+			log.WithFields(log.Fields{"lruKey": lkey}).Debugf("lkey created successfully")
 		} else {
-			log.Errorf("Error creating LRU k-v! %#v", ok)
+			log.WithFields(log.Fields{"error": ok}).Errorf("Error creating LRU k-v!")
 		}
 	}
 }
@@ -258,7 +268,11 @@ func (i *Filter) PMMonitor(pm *types.PacketManifest, anomalyTest chan *Pan, clos
 func (i *Filter) PanRemover(panCtls chan *PanCtl) {
 	for pCtl := range panCtls {
 		lkey := LRUKey(pCtl.P.src, pCtl.P.dst)
-		log.Debugf("Removing Pan: %s from cache[%d]\n%#v", lkey, i.LRU.Len(), *pCtl.P.gv)
+		log.WithFields(log.Fields{
+			"lruKey":      lkey,
+			"lruSize":     i.LRU.Len(),
+			"panGovector": *pCtl.P.gv,
+		}).Debugf("Removing Pan from LRU cache")
 		i.LRU.Remove(lkey)
 		close(pCtl.Stop)
 	}
