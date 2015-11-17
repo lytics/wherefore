@@ -20,7 +20,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package HoneyBadger
+package wherefore
 
 import (
 	"bufio"
@@ -29,7 +29,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/Sirupsen/logrus"
 	log "github.com/Sirupsen/logrus"
 	"github.com/lytics/anomalyzer"
 	"github.com/lytics/slackhook"
@@ -37,9 +36,9 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 
-	"github.com/david415/HoneyBadger/drivers"
-	"github.com/david415/HoneyBadger/types"
 	"github.com/hashicorp/golang-lru"
+	"github.com/lytics/wherefore/drivers"
+	"github.com/lytics/wherefore/types"
 )
 
 // Filter sets up the connection pool and is an abstraction layer for dealing
@@ -202,8 +201,8 @@ func (i *Filter) AnomalyTester(in <-chan *Pan, info chan *Pan, alertChan chan *A
 
 	alertLog := &log.Logger{
 		Out:       fw,
-		Formatter: new(logrus.JSONFormatter),
-		Hooks:     make(logrus.LevelHooks),
+		Formatter: new(log.JSONFormatter),
+		Hooks:     make(log.LevelHooks),
 		Level:     loglvl,
 	}
 

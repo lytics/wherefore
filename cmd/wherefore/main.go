@@ -21,18 +21,24 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
 	"math"
+	"os"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/lytics/anomalyzer"
+	"github.com/lytics/wherefore"
 
-	"github.com/david415/HoneyBadger"
-	"github.com/david415/HoneyBadger/logging"
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/logging"
+	"github.com/lytics/wherefore/types"
 )
+
+func init() {
+}
 
 func main() {
 	var (
@@ -73,8 +79,30 @@ func main() {
 	)
 	flag.Parse()
 
+	fio, err := os.OpenFile(*logDir+"/wherefore.log", os.O_RDWR|os.O_APPEND|os.O_CREATE, os.FileMode(0644))
+	if err != nil {
+		fmt.Printf("Unable to open wherefore log file: %#v", err)
+	}
+	defer fio.Close()
+	fw := bufio.NewWriter(fio)
+
 	loglvl, _ := log.ParseLevel(*logLevel)
+	log.SetOutput(fw)
 	log.SetLevel(loglvl)
+	/*
+		log = logrus.Logger{
+			Out:       fw,
+			Formatter: new(logrus.TextFormatter),
+			Hooks:     make(logrus.LevelHooks),
+			Level:     loglvl,
+		}
+	*/
+
+	log.WithFields(log.Fields{
+		"process": "wherefore",
+		"logDir":  *logDir,
+	}).Infof("Logrus running")
+	fw.Flush()
 
 	if *daq == "" {
 		log.Fatal("must specify a Data AcQuisition packet source`")
@@ -138,7 +166,7 @@ func main() {
 	}
 	log.Debugf("Filter Options:\n%#v", filterDriverOptions)
 
-	connectionFactory := &HoneyBadger.DefaultConnFactory{}
+	connectionFactory := &wherefore.DefaultConnFactory{}
 	var packetLoggerFactory types.PacketLoggerFactory
 	if *logPackets {
 		packetLoggerFactory = logging.NewPcapLoggerFactory(*logDir, *archiveDir, *maxNumPcapRotations, *maxPcapLogSize)
@@ -147,14 +175,15 @@ func main() {
 	}
 
 	log.Info("Wherefore: IP stream monitoring and analysis tool")
-	options := HoneyBadger.SupervisorOptions{
+	options := wherefore.SupervisorOptions{
 		FilterDriverOptions: &filterDriverOptions,
-		FilterFactory:       HoneyBadger.NewFilter,
+		FilterFactory:       wherefore.NewFilter,
 		ConnectionFactory:   connectionFactory,
 		PacketLoggerFactory: packetLoggerFactory,
 	}
-	supervisor := HoneyBadger.NewSupervisor(options)
+	supervisor := wherefore.NewSupervisor(options)
 	supervisor.Run()
+	fw.Flush()
 }
 
 //TODO: Debug why invalid args don't return an error here

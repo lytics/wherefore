@@ -23,11 +23,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/david415/HoneyBadger/types"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/lytics/wherefore/types"
 )
 
 type SerializedEvent struct {

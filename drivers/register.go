@@ -20,7 +20,7 @@
 package drivers
 
 import (
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/types"
 )
 
 var Drivers = map[string]func(*types.SnifferDriverOptions) (types.PacketDataSourceCloser, error){}

@@ -30,7 +30,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
 
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/types"
 )
 
 type TimedPacket struct {

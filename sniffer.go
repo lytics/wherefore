@@ -17,17 +17,18 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package HoneyBadger
+package wherefore
 
 import (
 	"fmt"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"io"
 	"log"
 
-	"github.com/david415/HoneyBadger/drivers"
-	"github.com/david415/HoneyBadger/types"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+
+	"github.com/lytics/wherefore/drivers"
+	"github.com/lytics/wherefore/types"
 )
 
 // Sniffer sets up the connection pool and is an abstraction layer for dealing

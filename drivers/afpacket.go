@@ -25,7 +25,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/afpacket"
 
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/types"
 )
 
 func init() {

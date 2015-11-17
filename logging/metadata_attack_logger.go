@@ -22,10 +22,11 @@ package logging
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/david415/HoneyBadger/types"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/lytics/wherefore/types"
 )
 
 // AttackMetadataJsonLogger is responsible for recording all attack reports as JSON objects in a file.

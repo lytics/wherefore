@@ -17,14 +17,14 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package HoneyBadger
+package wherefore
 
 import (
 	"os"
 	"os/signal"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/types"
 )
 
 type SupervisorOptions struct {
