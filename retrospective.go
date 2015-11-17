@@ -17,15 +17,16 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package HoneyBadger
+package wherefore
 
 import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/david415/HoneyBadger/types"
 	"log"
 	"time"
+
+	"github.com/lytics/wherefore/types"
 )
 
 func displayRingSummary(ringHeadPtr *types.Ring) {

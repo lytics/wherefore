@@ -1,4 +1,4 @@
-package HoneyBadger
+package wherefore
 
 import (
 	"net"

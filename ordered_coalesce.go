@@ -12,14 +12,14 @@
 // that can be found in the LICENSE_BSD file in the root of the source
 // tree.
 
-package HoneyBadger
+package wherefore
 
 import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/david415/HoneyBadger/types"
 	"github.com/google/gopacket/layers"
+	"github.com/lytics/wherefore/types"
 )
 
 const pageBytes = 1900

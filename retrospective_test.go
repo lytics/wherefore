@@ -1,4 +1,4 @@
-package HoneyBadger
+package wherefore
 
 import (
 	"bytes"
@@ -6,9 +6,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/david415/HoneyBadger/types"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/lytics/wherefore/types"
 )
 
 type reassemblyInput struct {

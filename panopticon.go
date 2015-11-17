@@ -20,7 +20,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package HoneyBadger
+package wherefore
 
 import (
 	"bytes"
@@ -32,9 +32,9 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/david415/HoneyBadger/types"
 	"github.com/drewlanenga/govector"
 	"github.com/google/gopacket/layers"
+	"github.com/lytics/wherefore/types"
 
 	"github.com/hashicorp/golang-lru"
 )

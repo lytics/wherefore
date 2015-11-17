@@ -17,13 +17,13 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package HoneyBadger
+package wherefore
 
 import (
 	"log"
 	"time"
 
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/types"
 )
 
 type TimedRawPacket struct {

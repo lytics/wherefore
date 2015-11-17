@@ -1,4 +1,4 @@
-package HoneyBadger
+package wherefore
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/types"
 )
 
 type DummyPacketLogger struct {

@@ -17,14 +17,14 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package HoneyBadger
+package wherefore
 
 import (
 	"log"
 	"sync"
 	"time"
 
-	"github.com/david415/HoneyBadger/types"
+	"github.com/lytics/wherefore/types"
 )
 
 const (

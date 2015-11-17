@@ -1,4 +1,4 @@
-package HoneyBadger
+package wherefore
 
 import (
 	"log"
@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/david415/HoneyBadger/logging"
-	"github.com/david415/HoneyBadger/types"
 	"github.com/google/gopacket/layers"
+	"github.com/lytics/wherefore/logging"
+	"github.com/lytics/wherefore/types"
 )
 
 type MockSniffer struct {

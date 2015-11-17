@@ -1,12 +1,13 @@
-package HoneyBadger
+package wherefore
 
 import (
-	"github.com/david415/HoneyBadger/types"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/lytics/wherefore/types"
 )
 
 func TestOrderedCoalesceUsedPages(t *testing.T) {
